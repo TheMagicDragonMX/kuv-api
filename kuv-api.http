@@ -1,0 +1,6 @@
+@kuv_api_HostAddress = http://localhost:5038
+
+GET {{kuv_api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
