@@ -1,4 +1,4 @@
-name: Automatic deployment ✨
+name: Automatic API deployment ✨
 
 on:
 
@@ -48,6 +48,7 @@ jobs:
           SOURCE: "./publish/"
           TARGET: "/var/www/kuv-api"
           ARGS: "-rlgoDzP --delete"
+          SCRIPT_AFTER: sudo systemctl restart kuv-api.service
 
       #
       # Notify about deploy in discord
