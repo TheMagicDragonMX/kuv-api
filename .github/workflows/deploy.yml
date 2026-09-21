@@ -1,0 +1,62 @@
+name: Automatic deployment ✨
+
+on:
+
+  # Trigger workflow when pushing to "dev"
+  push:
+    branches:
+      - dev
+
+  # Add manual triggers too
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      #
+      # Checkout source code
+      #
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      #
+      # Setup .NET SDK
+      #
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with: 
+          dotnet-version: '10.0.x'
+
+      #
+      # Build and publish
+      #
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+
+      #
+      # Deploy to VPS
+      #
+      - name: Deploy to VPS
+        uses: easingthemes/ssh-deploy@v5.1.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.VPS_HOST }}
+          REMOTE_USER: ${{ secrets.VPS_USER }}
+          SOURCE: "./publish/"
+          TARGET: "/var/www/kuv-api"
+          ARGS: "-rlgoDzP --delete"
+
+      #
+      # Notify about deploy in discord
+      #
+      - name: Tell discord everything OK
+        if: always()
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ vars.DISCORD_BACK_WEBHOOK }}
+          embed-title: "🚀 Ready"
+          embed-description: "KuV API is now deployed"
+          embed-color: 3066993
