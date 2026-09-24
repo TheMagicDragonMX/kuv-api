@@ -47,7 +47,7 @@ jobs:
       #
       - name: Run migrations
         env:
-          ConnectionStrings_DefaultConnection: ${{ secrets.KUVDB_CONNECTION_STRING }}
+          ConnectionStrings__DefaultConnection: ${{ secrets.KUVDB_CONNECTION_STRING }}
         run: dotnet ef database update --project kuv-api.csproj
 
       #
