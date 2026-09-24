@@ -23,6 +23,15 @@ jobs:
         uses: actions/checkout@v4
 
       #
+      # Generate environments file
+      #
+      - name: Generate environments file
+        run: |
+          sed \
+          -e "s|{{DB_CONNECTION_STRING}}|${{ secrets.KUVDB_CONNECTION_STRING }}|g" \
+          Deploy/kuv-api.env > kuv-api.env
+
+      #
       # Setup .NET SDK
       #
       - name: Setup .NET SDK
@@ -48,13 +57,7 @@ jobs:
           SOURCE: "./publish/"
           TARGET: "/var/www/kuv-api"
           ARGS: "-rlgoDzP --delete"
-          SCRIPT_AFTER: |
-
-            # Load connection string
-            sudo systemctl set-environment ConnectionStrings__DefaultConnection="${{ secrets.KUVDB_CONNECTION_STRING }}"
-            
-            # Restart API when deployed
-            sudo systemctl restart kuv-api.service
+          SCRIPT_AFTER: sudo systemctl restart kuv-api.service
 
       #
       # Notify about deploy in discord
