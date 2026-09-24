@@ -47,7 +47,7 @@ jobs:
       #
       - name: Run migrations
         env:
-          ConnectionStrings__DefaultConnection: ${{ secrets.KUVDB_CONNECTION_STRING }}
+          ConnectionStrings_DefaultConnection: ${{ secrets.KUVDB_CONNECTION_STRING }}
         run: dotnet ef database update --project kuv-api.csproj
 
       #
@@ -75,13 +75,25 @@ jobs:
           SCRIPT_AFTER: sudo systemctl restart kuv-api.service
 
       #
-      # Notify about deploy in discord
+      # Notify discord about deploy :3
       #
       - name: Tell discord everything OK
-        if: always()
+        if: success()
         uses: tsickert/discord-webhook@v7.0.0
         with:
           webhook-url: ${{ vars.DISCORD_BACK_WEBHOOK }}
           embed-title: "🚀 Ready"
           embed-description: "KuV API is now deployed"
           embed-color: 3066993
+
+      #
+      # Notify discord about failure
+      #
+      - name: Tell discord we died
+        if: failure()
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ vars.DISCORD_BACK_WEBHOOK }}
+          embed-title: "❌ Fail"
+          embed-description: "Tronamos :("
+          embed-color: 15158332
