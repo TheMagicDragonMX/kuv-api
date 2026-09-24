@@ -48,7 +48,13 @@ jobs:
           SOURCE: "./publish/"
           TARGET: "/var/www/kuv-api"
           ARGS: "-rlgoDzP --delete"
-          SCRIPT_AFTER: sudo systemctl restart kuv-api.service
+          SCRIPT_AFTER: |
+
+            # Load connection string
+            sudo systemctl set-environment ConnectionStrings__DefaultConnection="${{ secrets.KUVDB_CONNECTION_STRING }}"
+            
+            # Restart API when deployed
+            sudo systemctl restart kuv-api.service
 
       #
       # Notify about deploy in discord
