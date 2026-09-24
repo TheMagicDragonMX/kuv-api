@@ -42,7 +42,8 @@ jobs:
       - name: Generate environments file
         run: |
           sed \
-          -e "s|{{DB_CONNECTION_STRING}}|${{ secrets.KUVDB_CONNECTION_STRING }}|g" \
+          -e "s|{{KUVDB_CONNECTION_STRING}}|${{ secrets.KUVDB_CONNECTION_STRING }}|g" \
+          -e "s|{{JWT_KEY}}|${{ secrets.JWT_KEY }}|g" \
           Deploy/kuv-api.env > ./publish/kuv-api.env
         
       #
