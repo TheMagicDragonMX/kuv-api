@@ -1,5 +1,6 @@
 using kuv_api.Data;
 using kuv_api.Models;
+using kuv_api.Requests;
 using kuv_api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,36 +21,31 @@ public class SessionController(
     private readonly TokenService tokenService = tokenService;
 
     [HttpPost("login")]
-    public async Task<ActionResult<TokenResponse>> Login(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<TokenResponse>> Login(LoginRequest request)
     {
         var user = await dbContext.Users.SingleOrDefaultAsync(
-            item => item.Username == request.Username,
-            cancellationToken);
+            item => item.Username == request.Username);
 
         if (user is null || passwordHasher.VerifyHashedPassword(user, user.Hashword, request.Password) == PasswordVerificationResult.Failed)
         {
             return Unauthorized();
         }
 
-        return Ok(await tokenService.IssueTokens(user, cancellationToken));
+        return Ok(await tokenService.IssueTokens(user));
     }
 
     [HttpPost("refresh")]
-    public async Task<ActionResult<TokenResponse>> Refresh(RefreshRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<TokenResponse>> Refresh(RefreshRequest request)
     {
         var refreshTokenHash = TokenService.HashToken(request.RefreshToken);
         var user = await dbContext.Users.SingleOrDefaultAsync(
-            item => item.RefreshToken == refreshTokenHash,
-            cancellationToken);
+            item => item.RefreshToken == refreshTokenHash);
 
         if (user is null || !TokenService.HasValidRefreshTokenExpiry(request.RefreshToken))
         {
             return Unauthorized();
         }
 
-        return Ok(await tokenService.IssueTokens(user, cancellationToken));
+        return Ok(await tokenService.IssueTokens(user));
     }
-
-    public sealed record LoginRequest(string Username, string Password);
-    public sealed record RefreshRequest(string RefreshToken);
 }

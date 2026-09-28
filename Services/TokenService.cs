@@ -19,13 +19,13 @@ public class TokenService
         this.configuration = configuration;
     }
 
-    public async Task<TokenResponse> IssueTokens(User user, CancellationToken cancellationToken)
+    public async Task<TokenResponse> IssueTokens(User user)
     {
         var now = DateTime.UtcNow;
         var accessTokenLifetime = TimeSpan.FromMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
         var refreshToken = CreateRefreshToken(now.AddDays(7));
         user.RefreshToken = HashToken(refreshToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync();
 
         var claims = new[]
         {
