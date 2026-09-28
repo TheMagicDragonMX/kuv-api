@@ -33,7 +33,7 @@ builder.Services.AddDbContext<KuvDbContext>(options => options.UseNpgsql(connect
 // Ensure JWT key is configured
 if (string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Key"]) || Encoding.UTF8.GetByteCount(builder.Configuration["Jwt:Key"]!) < 32)
 {
-    throw new InvalidOperationException("Jwt:Key must be configured with at least 32 bytes using user secrets or an environment variable.");
+    throw new InvalidOperationException("Jwt:Key must be configured with at least 32 bytes using an environment variable.");
 }
 
 // Configure authentication
