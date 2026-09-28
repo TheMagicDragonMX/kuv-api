@@ -10,7 +10,7 @@ using kuv_api.Data;
 
 namespace kuv_api.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
+    [DbContext(typeof(KuvDbContext))]
     [Migration("20260915023331_AddUserAuthenticationFields")]
     partial class AddUserAuthenticationFields
     {

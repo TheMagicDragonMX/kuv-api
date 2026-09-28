@@ -22,7 +22,7 @@ builder.Services.AddControllers();
 /// Database
 /// 
 var connectionString = DatabaseConnection.GetConnectionString(builder.Configuration);
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<KuvDbContext>(options => options.UseNpgsql(connectionString));
 
 ///
 /// Auth configuration

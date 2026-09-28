@@ -15,12 +15,12 @@ namespace kuv_api.Controllers;
 [Route("[controller]")]
 public class SessionController : ControllerBase
 {
-    private readonly ApplicationDbContext dbContext;
+    private readonly KuvDbContext dbContext;
     private readonly IConfiguration configuration;
     private readonly IPasswordHasher<User> passwordHasher;
 
     public SessionController(
-        ApplicationDbContext dbContext,
+        KuvDbContext dbContext,
         IConfiguration configuration,
         IPasswordHasher<User> passwordHasher)
     {

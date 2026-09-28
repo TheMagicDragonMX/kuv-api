@@ -10,7 +10,7 @@ using kuv_api.Data;
 
 namespace kuv_api.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
+    [DbContext(typeof(KuvDbContext))]
     [Migration("20260915022256_AddUser")]
     partial class AddUser
     {
