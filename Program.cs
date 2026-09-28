@@ -1,3 +1,4 @@
+using DotNetEnv;
 using kuv_api.Data;
 using kuv_api.Models;
 using Scalar.AspNetCore;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 // ==========================================
