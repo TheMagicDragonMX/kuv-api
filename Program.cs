@@ -9,51 +9,86 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ==========================================
+//             Build configuration
+// ==========================================
 
+///
+/// Controllers
+/// 
 builder.Services.AddControllers();
+
+///
+/// Database
+/// 
 var connectionString = DatabaseConnection.GetConnectionString(builder.Configuration);
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+
+///
+/// Auth configuration
+/// 
+
+// Ensure JWT key is configured
+if (string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Key"]) || Encoding.UTF8.GetByteCount(builder.Configuration["Jwt:Key"]!) < 32)
 {
     throw new InvalidOperationException("Jwt:Key must be configured with at least 32 bytes using user secrets or an environment variable.");
 }
 
+// Configure authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
+            ValidateIssuerSigningKey    = true,
+            IssuerSigningKey            = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ValidateIssuer              = true,
+            ValidIssuer                 = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience            = true,
+            ValidAudience               = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime            = true,
+            ClockSkew                   = TimeSpan.FromSeconds(30)
         };
     });
+
 builder.Services.AddAuthorization();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+// ==========================================
+//                  Services
+// ==========================================
+
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ==========================================
+//      HTTP pipeline configuration
+// ==========================================
+
+///
+/// Scalar API (Open API)
+/// 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
+///
+/// HTTPS redirection
+///  .
 app.UseHttpsRedirection();
 
+///
+/// Authentication and authorization
+/// 
 app.UseAuthentication();
 app.UseAuthorization();
 
+///
+/// Controllers
+/// 
 app.MapControllers();
 
 app.Run();
