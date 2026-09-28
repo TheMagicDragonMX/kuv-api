@@ -1,6 +1,7 @@
 using DotNetEnv;
 using kuv_api.Data;
 using kuv_api.Models;
+using kuv_api.Services;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -60,6 +61,7 @@ builder.Services.AddAuthorization();
 // ==========================================
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<TokenService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
