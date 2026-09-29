@@ -21,6 +21,14 @@ var builder = WebApplication.CreateBuilder(args);
 /// 
 builder.Services.AddControllers();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod()));
+}
+
 ///
 /// Database
 /// 
@@ -62,6 +70,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<UserRegistrationService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -80,9 +89,14 @@ if (app.Environment.IsDevelopment())
 }
 
 ///
-/// HTTPS redirection
-///  .
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors();
+}
+else
+{
+    app.UseHttpsRedirection();
+}
 
 ///
 /// Authentication and authorization
