@@ -29,7 +29,7 @@ public sealed class UserService(
         var username = request.Username.Trim();
         var email = request.Email.Trim();
         var alreadyExists = await dbContext.Users.AnyAsync(
-            item => item.Username.ToLower() == username.ToLower() || item.Email.ToLower() == email.ToLower());
+            user => user.Username.ToLower() == username.ToLower() || user.Email.ToLower() == email.ToLower());
 
         if (alreadyExists)
         {

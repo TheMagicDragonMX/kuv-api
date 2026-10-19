@@ -63,3 +63,12 @@ public class User : BaseEntity
     public required string Email { get; set; }
 }
 ```
+
+## 8. Lambda parameter names in collection queries
+
+- The parameter of a lambda passed to a collection or query method (`AnyAsync`, `FirstOrDefaultAsync`, `Where`, `Select`, etc.) is named after the element being queried, in singular and camelCase: `user` for `Users`, `order` for `Orders`.
+- Do not use generic names such as `item`, `x`, `e` or `u`.
+
+```csharp
+await dbContext.Users.AnyAsync(user => user.Username == username);
+```

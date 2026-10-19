@@ -62,7 +62,7 @@ public class SessionController(
     public async Task<ActionResult<TokenResponse>> Login(LoginRequest request)
     {
         var user = await dbContext.Users.SingleOrDefaultAsync(
-            item => item.Username == request.Username);
+            user => user.Username == request.Username);
 
         if (user is null || passwordHasher.VerifyHashedPassword(user, user.Hashword, request.Password) == PasswordVerificationResult.Failed)
         {
@@ -86,7 +86,7 @@ public class SessionController(
     {
         var refreshTokenHash = TokenService.HashToken(request.RefreshToken);
         var user = await dbContext.Users.SingleOrDefaultAsync(
-            item => item.RefreshToken == refreshTokenHash);
+            user => user.RefreshToken == refreshTokenHash);
 
         if (user is null || !TokenService.HasValidRefreshTokenExpiry(request.RefreshToken))
         {
