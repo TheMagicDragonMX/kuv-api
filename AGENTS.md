@@ -42,3 +42,24 @@ Follow these rules whenever you write or modify code in this project.
 - In every class we create (entities, models, DTOs), a property gets the `required` keyword unless its value can legitimately be `null`.
 - Do not initialize non-nullable properties with placeholders such as `= string.Empty` just to silence nullable warnings; use `required` instead.
 - Properties that are not set by callers (e.g. the database-generated `Id`) and nullable properties (`string?`) are not `required`.
+
+## 7. Blank lines between declarations
+
+- Separate every declaration from the one before it with a blank line: properties, fields, methods, constructors, nested types. This applies even when a declaration is short or has an XML doc comment.
+- The XML doc comment belongs to the declaration below it, so the blank line goes **before** the comment, never between the comment and its declaration.
+- The first member inside a type does not need a blank line after the opening brace.
+
+```csharp
+public class User : BaseEntity
+{
+    /// <summary>
+    /// Unique username used to log in.
+    /// </summary>
+    public required string Username { get; set; }
+
+    /// <summary>
+    /// Unique email address.
+    /// </summary>
+    public required string Email { get; set; }
+}
+```

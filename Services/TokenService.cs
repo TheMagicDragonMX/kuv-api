@@ -14,6 +14,7 @@ namespace kuv_api.Services;
 public class TokenService
 {
     private readonly KuvDbContext dbContext;
+
     private readonly IConfiguration configuration;
 
     public TokenService(KuvDbContext dbContext, IConfiguration configuration)

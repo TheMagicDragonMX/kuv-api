@@ -22,8 +22,11 @@ public class SessionController(
 ) : ControllerBase
 {
     private readonly KuvDbContext dbContext = dbContext;
+
     private readonly IPasswordHasher<User> passwordHasher = passwordHasher;
+
     private readonly UserService userService = userService;
+
     private readonly TokenService tokenService = tokenService;
 
     /// <summary>
