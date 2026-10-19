@@ -12,6 +12,13 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your PostgreSQL 
 
 For deployment, set the `ConnectionStrings__DefaultConnection` environment variable instead.
 
+## Token configuration
+
+Token lifetimes are set in the `Jwt` section of `appsettings.json`:
+
+- `Jwt:AccessTokenMinutes`: minutes an access token is valid (default `15`).
+- `Jwt:RefreshTokenDays`: days a refresh token is valid (default `7`).
+
 ## EF Core commands
 
 Restore the local EF CLI tool once:

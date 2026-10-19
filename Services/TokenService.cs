@@ -11,17 +11,14 @@ namespace kuv_api.Services;
 /// <summary>
 /// Issues and validates access and refresh tokens.
 /// </summary>
-public class TokenService
+public class TokenService(
+    KuvDbContext dbContext, 
+    IConfiguration configuration
+)
 {
-    private readonly KuvDbContext dbContext;
+    private readonly KuvDbContext dbContext = dbContext;
 
-    private readonly IConfiguration configuration;
-
-    public TokenService(KuvDbContext dbContext, IConfiguration configuration)
-    {
-        this.dbContext = dbContext;
-        this.configuration = configuration;
-    }
+    private readonly IConfiguration configuration = configuration;
 
     /// <summary>
     /// Generates a new access/refresh token pair and stores the refresh token hash on the user.
@@ -36,7 +33,8 @@ public class TokenService
     {
         var now = DateTime.UtcNow;
         var accessTokenLifetime = TimeSpan.FromMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
-        var refreshToken = CreateRefreshToken(now.AddDays(7));
+        var refreshTokenLifetime = TimeSpan.FromDays(configuration.GetValue("Jwt:RefreshTokenDays", 7));
+        var refreshToken = CreateRefreshToken(now.Add(refreshTokenLifetime));
         user.RefreshToken = HashToken(refreshToken);
         await dbContext.SaveChangesAsync();
 
@@ -126,4 +124,4 @@ public class TokenService
 /// <param name="ExpiresIn">
 /// Access token lifetime in seconds.
 /// </param>
-public sealed record TokenResponse(string AccessToken, string RefreshToken, double ExpiresIn);
+public sealed record TokenResponse(string AccessToken, string RefreshToken, double ExpiresIn);
