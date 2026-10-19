@@ -8,6 +8,9 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace kuv_api.Services;
 
+/// <summary>
+/// Issues and validates access and refresh tokens.
+/// </summary>
 public class TokenService
 {
     private readonly KuvDbContext dbContext;
@@ -19,6 +22,15 @@ public class TokenService
         this.configuration = configuration;
     }
 
+    /// <summary>
+    /// Generates a new access/refresh token pair and stores the refresh token hash on the user.
+    /// </summary>
+    /// <param name="user">
+    /// User to issue the tokens for.
+    /// </param>
+    /// <returns>
+    /// The new access token, refresh token and access token lifetime.
+    /// </returns>
     public async Task<TokenResponse> IssueTokens(User user)
     {
         var now = DateTime.UtcNow;
@@ -50,6 +62,15 @@ public class TokenService
             accessTokenLifetime.TotalSeconds);
     }
 
+    /// <summary>
+    /// Creates a random refresh token that embeds its expiry.
+    /// </summary>
+    /// <param name="expiresAt">
+    /// UTC moment when the token expires.
+    /// </param>
+    /// <returns>
+    /// The refresh token in the form <c>random.expiryTicks</c>.
+    /// </returns>
     public static string CreateRefreshToken(DateTime expiresAt)
     {
         var randomPart = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
@@ -60,11 +81,29 @@ public class TokenService
         return $"{randomPart}.{expiresAt.Ticks}";
     }
 
+    /// <summary>
+    /// Hashes a token with SHA-256 so only the hash is stored.
+    /// </summary>
+    /// <param name="token">
+    /// Token to hash.
+    /// </param>
+    /// <returns>
+    /// The hash as an uppercase hexadecimal string.
+    /// </returns>
     public static string HashToken(string token)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
     }
 
+    /// <summary>
+    /// Checks that a refresh token has not expired.
+    /// </summary>
+    /// <param name="token">
+    /// Refresh token to check.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the embedded expiry is in the future; otherwise <c>false</c>.
+    /// </returns>
     public static bool HasValidRefreshTokenExpiry(string token)
     {
         var separator = token.LastIndexOf('.');
@@ -74,4 +113,16 @@ public class TokenService
     }
 }
 
-public sealed record TokenResponse(string AccessToken, string RefreshToken, double ExpiresIn);
+/// <summary>
+/// Tokens returned after a successful login or refresh.
+/// </summary>
+/// <param name="AccessToken">
+/// JWT used to authenticate requests.
+/// </param>
+/// <param name="RefreshToken">
+/// Token used to obtain a new token pair.
+/// </param>
+/// <param name="ExpiresIn">
+/// Access token lifetime in seconds.
+/// </param>
+public sealed record TokenResponse(string AccessToken, string RefreshToken, double ExpiresIn);

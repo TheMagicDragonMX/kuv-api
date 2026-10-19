@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace kuv_api.Controllers;
 
+/// <summary>
+/// Handles registration, login and token refresh.
+/// </summary>
 [ApiController]
 [Route("session")]
 public class SessionController(
@@ -23,6 +26,18 @@ public class SessionController(
     private readonly UserRegistrationService userRegistrationService = userRegistrationService;
     private readonly TokenService tokenService = tokenService;
 
+    /// <summary>
+    /// Registers a new user.
+    /// </summary>
+    /// <param name="request">
+    /// Registration data.
+    /// </param>
+    /// <returns>
+    /// 201 Created with the created user.
+    /// </returns>
+    /// <exception cref="ConflictException">
+    /// The username or email is already registered.
+    /// </exception>
     [HttpPost("register")]
     public async Task<ActionResult<RegisteredUserResponse>> Register(RegisterRequest request)
     {
@@ -31,6 +46,15 @@ public class SessionController(
         return StatusCode(StatusCodes.Status201Created, new RegisteredUserResponse(user.Id, user.Username, user.Email, user.Age));
     }
 
+    /// <summary>
+    /// Authenticates a user with username and password.
+    /// </summary>
+    /// <param name="request">
+    /// Login credentials.
+    /// </param>
+    /// <returns>
+    /// 200 OK with the issued tokens, or 401 Unauthorized if the credentials are wrong.
+    /// </returns>
     [HttpPost("login")]
     public async Task<ActionResult<TokenResponse>> Login(LoginRequest request)
     {
@@ -45,6 +69,15 @@ public class SessionController(
         return Ok(await tokenService.IssueTokens(user));
     }
 
+    /// <summary>
+    /// Issues a new token pair from a valid refresh token.
+    /// </summary>
+    /// <param name="request">
+    /// Refresh token to exchange.
+    /// </param>
+    /// <returns>
+    /// 200 OK with the issued tokens, or 401 Unauthorized if the token is unknown or expired.
+    /// </returns>
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResponse>> Refresh(RefreshRequest request)
     {
@@ -61,4 +94,19 @@ public class SessionController(
     }
 }
 
+/// <summary>
+/// Public data of a newly registered user.
+/// </summary>
+/// <param name="Id">
+/// Identifier of the user.
+/// </param>
+/// <param name="Username">
+/// Username of the user.
+/// </param>
+/// <param name="Email">
+/// Email of the user.
+/// </param>
+/// <param name="Age">
+/// Age of the user.
+/// </param>
 public sealed record RegisteredUserResponse(int Id, string Username, string Email, int Age);

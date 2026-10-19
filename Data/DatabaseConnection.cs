@@ -7,6 +7,18 @@ namespace kuv_api.Data;
 /// </summary>
 public static class DatabaseConnection
 {
+    /// <summary>
+    /// Gets the PostgreSQL connection string.
+    /// </summary>
+    /// <param name="configuration">
+    /// Application configuration to read from.
+    /// </param>
+    /// <returns>
+    /// The <c>DefaultConnection</c> connection string.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// The connection string is missing or empty.
+    /// </exception>
     public static string GetConnectionString(IConfiguration configuration)
     {
         var value = configuration.GetConnectionString("DefaultConnection");

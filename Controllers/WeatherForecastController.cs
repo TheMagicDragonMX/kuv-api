@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace kuv_api.Controllers;
 
+/// <summary>
+/// Template endpoint that returns random weather forecasts.
+/// </summary>
 [ApiController]
 [Route("[controller]")]
 public class WeatherForecastController : ControllerBase
@@ -11,6 +14,12 @@ public class WeatherForecastController : ControllerBase
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     ];
 
+    /// <summary>
+    /// Gets five random forecasts for the coming days.
+    /// </summary>
+    /// <returns>
+    /// A list of forecasts.
+    /// </returns>
     [HttpGet(Name = "GetWeatherForecast")]
     public IEnumerable<WeatherForecast> Get()
     {

@@ -4,8 +4,23 @@ using Microsoft.Extensions.Configuration;
 
 namespace kuv_api.Data;
 
+/// <summary>
+/// Creates <see cref="KuvDbContext"/> instances for design-time tooling such as <c>dotnet ef migrations</c>.
+/// </summary>
 public sealed class KuvDbContextFactory : IDesignTimeDbContextFactory<KuvDbContext>
 {
+    /// <summary>
+    /// Builds a context from the appsettings files and environment variables.
+    /// </summary>
+    /// <param name="args">
+    /// Arguments passed by the EF tooling.
+    /// </param>
+    /// <returns>
+    /// A context configured to use PostgreSQL.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// The connection string is missing.
+    /// </exception>
     public KuvDbContext CreateDbContext(string[] args)
     {
         // Build configuration
