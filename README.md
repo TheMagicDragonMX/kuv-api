@@ -38,3 +38,23 @@ To completely reset the database during development, this permanently deletes it
 dotnet ef database drop --force
 dotnet ef database update
 ```
+
+## Error handling
+
+Expected errors are thrown as `KuvException`s (`Exceptions/`), which carry an HTTP status code and a message. Any layer (services, controllers) can throw one; controllers do not catch them.
+
+| Exception               | Status |
+|-------------------------|--------|
+| `BadRequestException`   | 400    |
+| `UnauthorizedException` | 401    |
+| `ForbiddenException`    | 403    |
+| `NotFoundException`     | 404    |
+| `ConflictException`     | 409    |
+
+```csharp
+throw new ConflictException("El nombre de usuario o correo ya está registrado.");
+```
+
+The global `KuvExceptionHandler` (registered in `Program.cs`) catches them and responds with the exception's status and a body of `{ "message": "..." }`. Any other exception is logged and returned as a generic `500`, without internal details.
+
+Methods never return `null` to signal failure; they throw instead. Nullable reference types are enabled project-wide in `kuv-api.csproj`.

@@ -7,11 +7,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace kuv_api.Services;
 
+/// <summary>
+/// Creates new user accounts.
+/// </summary>
 public sealed class UserRegistrationService(
     KuvDbContext dbContext,
     IPasswordHasher<User> passwordHasher
 )
 {
+    /// <summary>
+    /// Registers a user with a hashed password.
+    /// </summary>
+    /// <returns>
+    /// The persisted user.
+    /// </returns>
+    /// <exception cref="ConflictException">
+    /// The username or email is already registered.
+    /// </exception>
     public async Task<User> RegisterAsync(RegisterRequest request)
     {
         var username = request.Username.Trim();

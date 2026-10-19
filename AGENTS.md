@@ -24,3 +24,10 @@ Follow these rules whenever you write or modify code in this project.
 - `<Nullable>enable</Nullable>` is set in `kuv-api.csproj`.
 - Do **not** add `#nullable enable` to individual files.
 - Do not silence nullable warnings with `!` unless the value is guaranteed by construction.
+
+## 4. Document what you create
+
+- Always write XML doc tags on multiple lines (opening tag, content, closing tag each on its own `///` line), even when the content is short. Never use the one-line form `/// <summary>Text</summary>`.
+- Add XML doc comments (`/// <summary>`) to every new public class, method and exception. Use `<exception cref="...">` on methods that throw `KuvException`s, and `<param>` / `<returns>` when they add information.
+- When you add or change a feature, convention or endpoint, update `README.md` in the same change.
+- Keep this file in sync when a convention changes.

@@ -2,8 +2,13 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace kuv_api.Exceptions;
 
+/// <summary>
+/// Global exception handler. Maps <see cref="KuvException"/> to its status code and a
+/// <c>{ "message": "..." }</c> body; any other exception is logged and returned as a generic 500.
+/// </summary>
 public sealed class KuvExceptionHandler(ILogger<KuvExceptionHandler> logger) : IExceptionHandler
 {
+    /// <inheritdoc />
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         if (exception is KuvException kuvException)
