@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 ///
 /// Controllers
 /// 
+
 builder.Services.AddControllers();
 
 if (builder.Environment.IsDevelopment())
@@ -32,6 +33,7 @@ if (builder.Environment.IsDevelopment())
 ///
 /// Database
 /// 
+
 var connectionString = DatabaseConnection.GetConnectionString(builder.Configuration);
 builder.Services.AddDbContext<KuvDbContext>(options => options.UseNpgsql(connectionString));
 

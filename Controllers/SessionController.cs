@@ -1,4 +1,5 @@
 using kuv_api.Data;
+using kuv_api.Exceptions;
 using kuv_api.Models;
 using kuv_api.Requests;
 using kuv_api.Services;
@@ -26,15 +27,16 @@ public class SessionController(
     [HttpPost("register")]
     public async Task<ActionResult<RegisteredUserResponse>> Register(RegisterRequest request)
     {
-        var user = await userRegistrationService.RegisterAsync(request);
-
-        if (user is null)
+        try
         {
-            return Conflict(new { message = "El nombre de usuario o correo ya está registrado." });
-        }
+            var user = await userRegistrationService.RegisterAsync(request);
 
-        return StatusCode(StatusCodes.Status201Created,
-            new RegisteredUserResponse(user.Id, user.Username, user.Email, user.Age));
+            return StatusCode(StatusCodes.Status201Created, new RegisteredUserResponse(user.Id, user.Username, user.Email, user.Age));
+        }
+        catch (UserAlreadyExistsException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
     }
 
     [HttpPost("login")]

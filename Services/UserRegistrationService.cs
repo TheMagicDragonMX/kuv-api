@@ -1,4 +1,5 @@
 using kuv_api.Data;
+using kuv_api.Exceptions;
 using kuv_api.Models;
 using kuv_api.Requests;
 using Microsoft.AspNetCore.Identity;
@@ -11,7 +12,7 @@ public sealed class UserRegistrationService(
     IPasswordHasher<User> passwordHasher
 )
 {
-    public async Task<User?> RegisterAsync(RegisterRequest request)
+    public async Task<User> RegisterAsync(RegisterRequest request)
     {
         var username = request.Username.Trim();
         var email = request.Email.Trim();
@@ -20,7 +21,7 @@ public sealed class UserRegistrationService(
 
         if (alreadyExists)
         {
-            return null;
+            throw new UserAlreadyExistsException();
         }
 
         var user = new User
