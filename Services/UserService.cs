@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace kuv_api.Services;
 
 /// <summary>
-/// Creates new user accounts.
+/// Handles user-related logic, such as creating new user accounts.
 /// </summary>
-public sealed class UserRegistrationService(
+public sealed class UserService(
     KuvDbContext dbContext,
     IPasswordHasher<User> passwordHasher
 )

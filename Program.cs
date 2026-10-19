@@ -75,7 +75,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<UserRegistrationService>();
+builder.Services.AddScoped<UserService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

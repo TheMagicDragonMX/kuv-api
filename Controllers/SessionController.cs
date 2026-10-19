@@ -17,13 +17,13 @@ namespace kuv_api.Controllers;
 public class SessionController(
     KuvDbContext dbContext,
     IPasswordHasher<User> passwordHasher,
-    UserRegistrationService userRegistrationService,
+    UserService userService,
     TokenService tokenService
 ) : ControllerBase
 {
     private readonly KuvDbContext dbContext = dbContext;
     private readonly IPasswordHasher<User> passwordHasher = passwordHasher;
-    private readonly UserRegistrationService userRegistrationService = userRegistrationService;
+    private readonly UserService userService = userService;
     private readonly TokenService tokenService = tokenService;
 
     /// <summary>
@@ -41,7 +41,7 @@ public class SessionController(
     [HttpPost("register")]
     public async Task<ActionResult<RegisteredUserResponse>> Register(RegisterRequest request)
     {
-        var user = await userRegistrationService.RegisterAsync(request);
+        var user = await userService.RegisterAsync(request);
 
         return StatusCode(StatusCodes.Status201Created, new RegisteredUserResponse(user.Id, user.Username, user.Email, user.Age));
     }
