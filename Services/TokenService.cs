@@ -21,7 +21,7 @@ public class TokenService(
     private readonly IConfiguration configuration = configuration;
 
     /// <summary>
-    /// Generates a new access/refresh token pair and stores the refresh token hash on the user.
+    /// Generates a new access/refresh token pair and saves the refresh token hash on the user.
     /// </summary>
     /// <param name="user">
     /// User to issue the tokens for.
@@ -32,12 +32,9 @@ public class TokenService(
     public async Task<TokenResponse> IssueTokens(User user)
     {
         var now = DateTime.UtcNow;
-        var accessTokenLifetime = TimeSpan.FromMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
-        var refreshTokenLifetime = TimeSpan.FromDays(configuration.GetValue("Jwt:RefreshTokenDays", 7));
-        var refreshToken = CreateRefreshToken(now.Add(refreshTokenLifetime));
-        user.RefreshToken = HashToken(refreshToken);
-        await dbContext.SaveChangesAsync();
 
+        // Access token
+        var accessTokenLifetime = TimeSpan.FromMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -53,12 +50,17 @@ public class TokenService(
             claims: claims,
             notBefore: now,
             expires: now.Add(accessTokenLifetime),
-            signingCredentials: credentials);
+            signingCredentials: credentials
+        );
+        var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-        return new TokenResponse(
-            new JwtSecurityTokenHandler().WriteToken(token),
-            refreshToken,
-            accessTokenLifetime.TotalSeconds);
+        // Refresh token
+        var refreshTokenLifetime = TimeSpan.FromDays(configuration.GetValue("Jwt:RefreshTokenDays", 7));
+        var refreshToken = CreateRefreshToken(now.Add(refreshTokenLifetime));
+        user.RefreshToken = HashToken(refreshToken);
+        await dbContext.SaveChangesAsync();
+
+        return new TokenResponse(accessToken, refreshToken, accessTokenLifetime.TotalSeconds);
     }
 
     /// <summary>

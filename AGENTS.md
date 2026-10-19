@@ -87,3 +87,18 @@ var alreadyExists = await dbContext.Users.AnyAsync(user =>
     user.Email.ToLower() == email.ToLower()
 );
 ```
+
+## 10. Closing parenthesis of multi-line method calls
+
+- When the arguments of a method or constructor call are split across multiple lines, the closing parenthesis goes on its own line, aligned with the start of the statement. Never leave it at the end of the last argument.
+- This also applies to the multi-condition lambdas described in rule 9.
+
+```csharp
+var token = new JwtSecurityToken(
+    issuer: configuration["Jwt:Issuer"],
+    audience: configuration["Jwt:Audience"],
+    claims: claims,
+    expires: expiresAt,
+    signingCredentials: credentials
+);
+```
