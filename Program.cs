@@ -1,5 +1,6 @@
 using DotNetEnv;
 using kuv_api.Data;
+using kuv_api.Exceptions;
 using kuv_api.Models;
 using kuv_api.Services;
 using Scalar.AspNetCore;
@@ -21,6 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 /// 
 
 builder.Services.AddControllers();
+builder.Services.AddExceptionHandler<KuvExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -80,6 +83,8 @@ var app = builder.Build();
 // ==========================================
 //      HTTP pipeline configuration
 // ==========================================
+
+app.UseExceptionHandler();
 
 ///
 /// Scalar API (Open API)

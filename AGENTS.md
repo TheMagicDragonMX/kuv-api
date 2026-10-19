@@ -7,13 +7,17 @@ Follow these rules whenever you write or modify code in this project.
 - `null` is only allowed when the absence of a value is a legitimate, expected state of the data (e.g. an optional field).
 - When an operation cannot complete (duplicate user, invalid state, missing required entity, etc.), **throw an exception** instead of returning `null`, `false`, or a sentinel value.
 - Service methods return the non-nullable result type (`Task<User>`, not `Task<User?>`).
-- Use specific exception types placed in `Exceptions/` (e.g. `UserAlreadyExistsException`) rather than generic `Exception`.
 
-## 2. Controllers are the only place that catch exceptions
+## 2. Error handling: `KuvException` hierarchy
 
-- Services and other lower layers throw; they do not catch in order to translate errors into return values.
-- Every controller action catches the exceptions its service calls can throw and maps them to the proper HTTP response (e.g. `UserAlreadyExistsException` -> `409 Conflict`).
-- Error responses use the shape `{ "message": "..." }`.
+- All expected errors are `KuvException`s ([Exceptions/KuvException.cs](Exceptions/KuvException.cs)), which carry a `StatusCode` and a `Message`.
+- Do **not** create a new exception class per error. Throw one of the existing utility exceptions with a message:
+  `BadRequestException` (400), `UnauthorizedException` (401), `ForbiddenException` (403), `NotFoundException` (404), `ConflictException` (409).
+  Add a new subclass in `Exceptions/` only when a status code is missing.
+- Services throw; they do not catch to translate errors into return values.
+- Controllers contain no try/catch and no error-mapping code. The global `KuvExceptionHandler` (registered in `Program.cs` via `AddExceptionHandler` / `UseExceptionHandler`) is the single place that catches exceptions:
+  - `KuvException` -> its `StatusCode` with `{ "message": "..." }`.
+  - Any other `Exception` -> logged, `500` with a generic message (never leak internal details).
 
 ## 3. Nullable reference types are enabled project-wide
 

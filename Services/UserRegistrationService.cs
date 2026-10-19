@@ -21,7 +21,7 @@ public sealed class UserRegistrationService(
 
         if (alreadyExists)
         {
-            throw new UserAlreadyExistsException();
+            throw new ConflictException("El nombre de usuario o correo ya está registrado.");
         }
 
         var user = new User
