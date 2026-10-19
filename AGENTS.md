@@ -72,3 +72,18 @@ public class User : BaseEntity
 ```csharp
 await dbContext.Users.AnyAsync(user => user.Username == username);
 ```
+
+## 9. Formatting of lambdas in method calls
+
+- The lambda starts on the same line as the opening parenthesis of the call: `AnyAsync(user =>`, never `AnyAsync(` followed by the lambda on the next line.
+- A lambda with a single condition is a one-liner, including the closing parenthesis.
+- A lambda with more than one condition breaks after `=>`. Each condition goes on its own indented line, the boolean operator (`||`, `&&`) stays at the **end** of the line (never at the start of the next one), and the closing parenthesis goes on its own line, aligned with the start of the statement.
+
+```csharp
+var user = await dbContext.Users.SingleOrDefaultAsync(user => user.Username == username);
+
+var alreadyExists = await dbContext.Users.AnyAsync(user =>
+    user.Username.ToLower() == username.ToLower() ||
+    user.Email.ToLower() == email.ToLower()
+);
+```
