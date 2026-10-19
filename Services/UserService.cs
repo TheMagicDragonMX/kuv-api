@@ -40,9 +40,9 @@ public sealed class UserService(
         {
             Username = username,
             Email = email,
-            Age = request.Age
+            Age = request.Age,
+            Hashword = passwordHasher.HashPassword(null!, request.Password)
         };
-        user.Hashword = passwordHasher.HashPassword(user, request.Password);
 
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();

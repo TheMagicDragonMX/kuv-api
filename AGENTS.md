@@ -36,3 +36,9 @@ Follow these rules whenever you write or modify code in this project.
 
 - Do not add the `Async` suffix to methods we create, even when they return `Task` / `Task<T>` (e.g. `Register`, not `RegisterAsync`).
 - Methods that implement or override a framework/library contract (e.g. `IExceptionHandler.TryHandleAsync`) keep the name the contract requires.
+
+## 6. Required properties
+
+- In every class we create (entities, models, DTOs), a property gets the `required` keyword unless its value can legitimately be `null`.
+- Do not initialize non-nullable properties with placeholders such as `= string.Empty` just to silence nullable warnings; use `required` instead.
+- Properties that are not set by callers (e.g. the database-generated `Id`) and nullable properties (`string?`) are not `required`.

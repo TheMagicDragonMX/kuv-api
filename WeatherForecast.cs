@@ -8,12 +8,12 @@ public class WeatherForecast
     /// <summary>
     /// Date of the forecast.
     /// </summary>
-    public DateOnly Date { get; set; }
+    public required DateOnly Date { get; set; }
 
     /// <summary>
     /// Temperature in Celsius.
     /// </summary>
-    public int TemperatureC { get; set; }
+    public required int TemperatureC { get; set; }
 
     /// <summary>
     /// Temperature in Fahrenheit, derived from Celsius.
