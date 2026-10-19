@@ -24,7 +24,7 @@ public sealed class UserService(
     /// <exception cref="ConflictException">
     /// The username or email is already registered.
     /// </exception>
-    public async Task<User> RegisterAsync(RegisterRequest request)
+    public async Task<User> Register(RegisterRequest request)
     {
         var username = request.Username.Trim();
         var email = request.Email.Trim();

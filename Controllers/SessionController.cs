@@ -41,7 +41,7 @@ public class SessionController(
     [HttpPost("register")]
     public async Task<ActionResult<RegisteredUserResponse>> Register(RegisterRequest request)
     {
-        var user = await userService.RegisterAsync(request);
+        var user = await userService.Register(request);
 
         return StatusCode(StatusCodes.Status201Created, new RegisteredUserResponse(user.Id, user.Username, user.Email, user.Age));
     }

@@ -31,3 +31,8 @@ Follow these rules whenever you write or modify code in this project.
 - Add XML doc comments (`/// <summary>`) to every new public class, method and exception. Use `<exception cref="...">` on methods that throw `KuvException`s, and `<param>` / `<returns>` when they add information.
 - When you add or change a feature, convention or endpoint, update `README.md` in the same change.
 - Keep this file in sync when a convention changes.
+
+## 5. Method naming: no `Async` suffix
+
+- Do not add the `Async` suffix to methods we create, even when they return `Task` / `Task<T>` (e.g. `Register`, not `RegisterAsync`).
+- Methods that implement or override a framework/library contract (e.g. `IExceptionHandler.TryHandleAsync`) keep the name the contract requires.
