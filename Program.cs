@@ -65,6 +65,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime            = true,
             ClockSkew                   = TimeSpan.FromSeconds(30)
         };
+
+        // Browsers cannot set headers on a WebSocket, so the client socket sends its token in the query string.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Path.StartsWithSegments("/ws/client") && context.Request.Query.TryGetValue("access_token", out var token))
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -76,6 +90,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<ICubeDirectory, ConfigCubeDirectory>();
+builder.Services.AddSingleton<CubeHub>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -108,6 +124,8 @@ else
 ///
 /// Authentication and authorization
 /// 
+app.UseWebSockets();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
