@@ -90,6 +90,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ProfileService>();
 builder.Services.AddSingleton<ICubeDirectory, ConfigCubeDirectory>();
 builder.Services.AddSingleton<CubeHub>();
 builder.Services.AddOpenApi();

@@ -12,4 +12,27 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	/// Registered users.
 	/// </summary>
 	public DbSet<User> Users => Set<User>();
+
+	/// <summary>
+	/// Who follows whom.
+	/// </summary>
+	public DbSet<Follow> Follows => Set<Follow>();
+
+	/// <summary>
+	/// Sets up the key and relations of the follows.
+	/// </summary>
+	/// <param name="modelBuilder">
+	/// Builder of the model.
+	/// </param>
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+		modelBuilder.Entity<Follow>(entity =>
+		{
+			entity.HasKey(follow => new { follow.FollowerId, follow.FollowedId });
+			entity.HasIndex(follow => follow.FollowedId);
+			entity.HasOne(follow => follow.Follower).WithMany().HasForeignKey(follow => follow.FollowerId).OnDelete(DeleteBehavior.Cascade);
+			entity.HasOne(follow => follow.Followed).WithMany().HasForeignKey(follow => follow.FollowedId).OnDelete(DeleteBehavior.Cascade);
+			entity.ToTable(table => table.HasCheckConstraint("CK_Follows_NotSelf", "\"FollowerId\" <> \"FollowedId\""));
+		});
+	}
 }

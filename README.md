@@ -35,6 +35,26 @@ The API routes messages between cubes and the web app over WebSockets. It only r
 - `ICubeDirectory` decides who is a valid cube and who may talk to which cube. `ConfigCubeDirectory` has no database: one shared secret, and every signed-in user may use every cube. When devices are stored, implement `ICubeDirectory` over them and swap it in `Program.cs`.
 - The hub (`CubeHub`) keeps its connections in memory, so it works with a single API instance.
 
+## Profiles and follows
+
+Every endpoint needs `Authorization: Bearer <access token>`. What a profile says (whether two users follow each other) depends on who asks, so the answers are always "as the signed-in user sees them" (`Services/ProfileService.cs`).
+
+| Endpoint | What it does |
+|---|---|
+| `GET /users/me` | The signed-in user's profile, with their email. |
+| `PUT /users/me` | Changes `description` (up to 280 characters) and `photo` (a `data:image/png\|jpeg\|webp\|gif;base64,...` URL of up to 400 000 characters). A blank field is cleared. |
+| `GET /users?search=<text>` | Up to 20 users whose name contains the text (not the signed-in user). |
+| `GET /users/{id}` | A user's profile, without their email. |
+| `GET /users/{id}/followers` | Who follows the user, the most recent first. |
+| `GET /users/{id}/following` | Who the user follows, the most recent first. |
+| `PUT /users/{id}/follow` | The signed-in user follows them (doing it twice changes nothing). |
+| `DELETE /users/{id}/follow` | The signed-in user stops following them. |
+
+- A profile (`ProfileResponse`) has `id`, `username`, `email` (only your own), `description`, `photo`, `followers`, `following`, `followsYou`, `youFollow` and `isYou`.
+- A list entry (`UserSummaryResponse`) has `id`, `username`, `description`, `photo`, `followers`, `followsYou` and `youFollow`. `followsYou && youFollow` means they follow each other.
+- A follow is a row of `Follows` (`Models/Follow.cs`) keyed by the pair, so it exists once; a database check stops a user from following themselves.
+- The migration `AddProfilesAndFollows` adds them; apply it with `dotnet ef database update`.
+
 ## EF Core commands
 
 Restore the local EF CLI tool once:

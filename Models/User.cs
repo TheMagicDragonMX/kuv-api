@@ -29,4 +29,14 @@ public class User : BaseEntity
 	/// Hash of the current refresh token. Null while the user has no active session.
 	/// </summary>
 	public string? RefreshToken { get; set; }
+
+	/// <summary>
+	/// What the user tells about themselves on their profile. Null until they write it.
+	/// </summary>
+	public string? Description { get; set; }
+
+	/// <summary>
+	/// Profile picture as a data URL (<c>data:image/...;base64,...</c>). Null until they choose one.
+	/// </summary>
+	public string? Photo { get; set; }
 }
