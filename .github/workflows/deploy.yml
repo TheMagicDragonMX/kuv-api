@@ -95,5 +95,5 @@ jobs:
         with:
           webhook-url: ${{ vars.DISCORD_BACK_WEBHOOK }}
           embed-title: "❌ Fail"
-          embed-description: "Tronamos :("
+          embed-description: "KuV API deployment failed :(\n[See the run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · `${{ github.sha }}`"
           embed-color: 15158332
