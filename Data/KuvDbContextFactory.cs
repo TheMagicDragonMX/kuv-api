@@ -1,3 +1,4 @@
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +24,8 @@ public sealed class KuvDbContextFactory : IDesignTimeDbContextFactory<KuvDbConte
     /// </exception>
     public KuvDbContext CreateDbContext(string[] args)
     {
+        Env.TraversePath().Load();
+
         // Build configuration
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
         var configuration = new ConfigurationBuilder()

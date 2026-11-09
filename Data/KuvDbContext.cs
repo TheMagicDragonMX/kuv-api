@@ -19,7 +19,12 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	public DbSet<Follow> Follows => Set<Follow>();
 
 	/// <summary>
-	/// Sets up the key and relations of the follows.
+	/// User animations and creations.
+	/// </summary>
+	public DbSet<Creation> Creations => Set<Creation>();
+
+	/// <summary>
+	/// Sets up the key and relations of the follows and creations.
 	/// </summary>
 	/// <param name="modelBuilder">
 	/// Builder of the model.
@@ -33,6 +38,12 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 			entity.HasOne(follow => follow.Follower).WithMany().HasForeignKey(follow => follow.FollowerId).OnDelete(DeleteBehavior.Cascade);
 			entity.HasOne(follow => follow.Followed).WithMany().HasForeignKey(follow => follow.FollowedId).OnDelete(DeleteBehavior.Cascade);
 			entity.ToTable(table => table.HasCheckConstraint("CK_Follows_NotSelf", "\"FollowerId\" <> \"FollowedId\""));
+		});
+
+		modelBuilder.Entity<Creation>(entity =>
+		{
+			entity.HasIndex(c => c.UserId);
+			entity.HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
 		});
 	}
 }
