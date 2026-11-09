@@ -25,13 +25,14 @@ builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<KuvExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod()));
-}
+// Origins allowed to call the API from a browser (see "Cors:AllowedOrigins" in appsettings).
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+    policy.WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+));
 
 ///
 /// Database
@@ -115,11 +116,11 @@ if (app.Environment.IsDevelopment())
 }
 
 ///
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors();
-}
-else
+/// CORS (must run before authentication so preflight requests are answered)
+///
+app.UseCors();
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }

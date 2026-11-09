@@ -19,6 +19,10 @@ Token lifetimes are set in the `Jwt` section of `appsettings.json`:
 - `Jwt:AccessTokenMinutes`: minutes an access token is valid (default `15`).
 - `Jwt:RefreshTokenDays`: days a refresh token is valid (default `7`).
 
+## CORS
+
+Browsers may call the API only from the origins listed in `Cors:AllowedOrigins` (`appsettings.json`: `https://kuv.lol`; `appsettings.Development.json` adds `http://localhost:4200`). Any header and method is allowed. To add an origin, edit that list or set `Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`... as environment variables.
+
 ## Cube sockets (live commands)
 
 The API routes messages between cubes and the web app over WebSockets. It only routes; it does not know what the commands mean. Every frame, in both directions, is one JSON text message `{ "name", "id"?, "replyTo"?, "payload"? }` (`Models/CubeMessage.cs`).
