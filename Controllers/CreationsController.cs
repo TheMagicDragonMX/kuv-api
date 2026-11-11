@@ -24,7 +24,17 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	[HttpGet("me")]
 	public async Task<ActionResult<List<CreationResponse>>> GetMyCreations()
 	{
-		return Ok(await creationService.GetUserCreations(ViewerId()));
+		return Ok(await creationService.GetUserCreations(ViewerId(), ViewerId()));
+	}
+
+	/// <summary>
+	/// Returns creations of a specific user.
+	/// If viewing another user, returns only their public creations.
+	/// </summary>
+	[HttpGet("user/{userId:int}")]
+	public async Task<ActionResult<List<CreationResponse>>> GetUserCreations(int userId)
+	{
+		return Ok(await creationService.GetUserCreations(ViewerId(), userId));
 	}
 
 	/// <summary>
@@ -51,6 +61,7 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	/// </summary>
 	[HttpPost]
 	[Consumes("multipart/form-data")]
+	[RequestSizeLimit(100 * 1024 * 1024)]
 	public async Task<ActionResult<CreationResponse>> Create([FromForm] CreateCreationRequest request)
 	{
 		var response = await creationService.Create(ViewerId(), request);
@@ -62,9 +73,19 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	/// </summary>
 	[HttpPut("{id:int}")]
 	[Consumes("multipart/form-data")]
+	[RequestSizeLimit(100 * 1024 * 1024)]
 	public async Task<ActionResult<CreationResponse>> Update(int id, [FromForm] UpdateCreationRequest request)
 	{
 		return Ok(await creationService.Update(ViewerId(), id, request));
+	}
+
+	/// <summary>
+	/// Toggles or sets the public visibility of a creation.
+	/// </summary>
+	[HttpPatch("{id:int}/visibility")]
+	public async Task<ActionResult<CreationResponse>> SetVisibility(int id, [FromBody] SetVisibilityRequest request)
+	{
+		return Ok(await creationService.SetVisibility(ViewerId(), id, request.IsPublic));
 	}
 
 	/// <summary>
@@ -89,4 +110,3 @@ public class CreationsController(CreationService creationService) : ControllerBa
 		return userId;
 	}
 }
-

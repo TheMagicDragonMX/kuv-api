@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Http.Features;
 
 Env.Load();
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<KuvExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+// Configure request limits for video/creation uploads (up to 100 MB)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
+});
 
 // Origins allowed to call the API from a browser (see "Cors:AllowedOrigins" in appsettings).
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -104,6 +115,11 @@ var app = builder.Build();
 //      HTTP pipeline configuration
 // ==========================================
 
+///
+/// CORS (must run before ExceptionHandler and Authentication so preflight and error responses include CORS headers)
+///
+app.UseCors();
+
 app.UseExceptionHandler();
 
 ///
@@ -114,11 +130,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
-
-///
-/// CORS (must run before authentication so preflight requests are answered)
-///
-app.UseCors();
 
 if (!app.Environment.IsDevelopment())
 {

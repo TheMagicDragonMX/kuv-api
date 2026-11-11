@@ -18,6 +18,11 @@ public sealed record CreationResponse(
 );
 
 /// <summary>
+/// Request to change visibility of a creation.
+/// </summary>
+public sealed record SetVisibilityRequest(bool IsPublic);
+
+/// <summary>
 /// Data for creating a new cube creation.
 /// </summary>
 public sealed class CreateCreationRequest
@@ -98,4 +103,3 @@ public sealed class UpdateCreationRequest
 	/// </summary>
 	public IFormFile? Video { get; set; }
 }
-

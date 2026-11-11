@@ -46,16 +46,30 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 	}
 
 	/// <summary>
-	/// Returns all creations of the specified user.
+	/// Returns creations of the specified user.
+	/// If viewerId == userId, returns all creations.
+	/// If viewerId != userId, returns only public creations.
 	/// </summary>
-	public async Task<List<CreationResponse>> GetUserCreations(int userId)
+	public async Task<List<CreationResponse>> GetUserCreations(int viewerId, int userId)
 	{
-		return await db.Creations
-			.Where(c => c.UserId == userId)
+		var query = db.Creations.Where(c => c.UserId == userId);
+
+		if (viewerId != userId)
+		{
+			query = query.Where(c => c.IsPublic);
+		}
+
+		return await query
 			.OrderByDescending(c => c.CreatedAt)
 			.Select(c => ToResponse(c))
 			.ToListAsync();
 	}
+
+	/// <summary>
+	/// Returns all creations of the specified user.
+	/// </summary>
+	public async Task<List<CreationResponse>> GetUserCreations(int userId) =>
+		await GetUserCreations(userId, userId);
 
 	/// <summary>
 	/// Returns a specific creation by ID if owned by the viewer or if public.
@@ -162,6 +176,26 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
 		}
 
+		creation.UpdatedAt = DateTime.UtcNow;
+		await db.SaveChangesAsync();
+
+		return ToResponse(creation);
+	}
+
+	/// <summary>
+	/// Sets the public visibility of a creation.
+	/// </summary>
+	public async Task<CreationResponse> SetVisibility(int userId, int creationId, bool isPublic)
+	{
+		var creation = await db.Creations.FindAsync(creationId)
+			?? throw new NotFoundException($"Creation {creationId} was not found.");
+
+		if (creation.UserId != userId)
+		{
+			throw new ForbiddenException("You are not allowed to edit this creation.");
+		}
+
+		creation.IsPublic = isPublic;
 		creation.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 
