@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using kuv_api.Models;
+using kuv_api.Models.Entities;
 
 namespace kuv_api.Data;
 

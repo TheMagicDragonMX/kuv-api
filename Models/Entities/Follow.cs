@@ -1,4 +1,4 @@
-namespace kuv_api.Models;
+namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// One user following another. The pair is the key, so a user follows another at most once.

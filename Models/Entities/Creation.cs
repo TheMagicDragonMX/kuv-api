@@ -1,4 +1,4 @@
-namespace kuv_api.Models;
+namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// A user-created animation or project for the cube.

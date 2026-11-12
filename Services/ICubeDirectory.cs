@@ -1,4 +1,4 @@
-using kuv_api.Exceptions;
+using kuv_api.Models.Exceptions;
 
 namespace kuv_api.Services;
 

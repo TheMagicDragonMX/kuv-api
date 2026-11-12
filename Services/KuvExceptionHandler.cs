@@ -1,6 +1,7 @@
+using kuv_api.Models.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 
-namespace kuv_api.Exceptions;
+namespace kuv_api.Services;
 
 /// <summary>
 /// Global exception handler. Maps <see cref="KuvException"/> to its status code and a

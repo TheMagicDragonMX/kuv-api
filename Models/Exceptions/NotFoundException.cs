@@ -1,4 +1,4 @@
-namespace kuv_api.Exceptions;
+namespace kuv_api.Models.Exceptions;
 
 /// <summary>
 /// The requested resource does not exist (HTTP 404).

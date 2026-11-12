@@ -10,10 +10,10 @@ Follow these rules whenever you write or modify code in this project.
 
 ## 2. Error handling: `KuvException` hierarchy
 
-- All expected errors are `KuvException`s ([Exceptions/KuvException.cs](Exceptions/KuvException.cs)), which carry a `StatusCode` and a `Message`.
+- All expected errors are `KuvException`s ([Models/Exceptions/KuvException.cs](Models/Exceptions/KuvException.cs)), which carry a `StatusCode` and a `Message`.
 - Do **not** create a new exception class per error. Throw one of the existing utility exceptions with a message:
   `BadRequestException` (400), `UnauthorizedException` (401), `ForbiddenException` (403), `NotFoundException` (404), `ConflictException` (409).
-  Add a new subclass in `Exceptions/` only when a status code is missing.
+  Add a new subclass in `Models/Exceptions/` only when a status code is missing.
 - Services throw; they do not catch to translate errors into return values.
 - Controllers contain no try/catch and no error-mapping code. The global `KuvExceptionHandler` (registered in `Program.cs` via `AddExceptionHandler` / `UseExceptionHandler`) is the single place that catches exceptions:
   - `KuvException` -> its `StatusCode` with `{ "message": "..." }`.
@@ -102,3 +102,8 @@ var token = new JwtSecurityToken(
     signingCredentials: credentials
 );
 ```
+
+## 11. Where type files live
+
+- Files that only define classes/records that get instantiated live in `Models/`, one subfolder per kind, and the namespace follows the folder: `Models/Entities` (database entities), `Models/Exceptions` (the `KuvException` hierarchy), `Models/Requests` (request DTOs), `Models/Messages` (socket messages), `Models/Responses` (response DTOs).
+- Classes with behavior (services, the exception handler, controllers, data access) stay outside `Models/`.

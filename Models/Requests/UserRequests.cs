@@ -1,4 +1,4 @@
-namespace kuv_api.Requests;
+namespace kuv_api.Models.Requests;
 
 /// <summary>
 /// New profile data of the signed-in user. A null or blank field clears it.

@@ -1,4 +1,4 @@
-namespace kuv_api.Exceptions;
+namespace kuv_api.Models.Exceptions;
 
 /// <summary>
 /// The operation conflicts with existing state, e.g. a duplicate (HTTP 409).

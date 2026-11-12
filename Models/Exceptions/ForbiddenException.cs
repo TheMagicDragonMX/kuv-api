@@ -1,4 +1,4 @@
-namespace kuv_api.Exceptions;
+namespace kuv_api.Models.Exceptions;
 
 /// <summary>
 /// The caller is authenticated but not allowed to do this (HTTP 403).

@@ -1,4 +1,4 @@
-namespace kuv_api.Exceptions;
+namespace kuv_api.Models.Exceptions;
 
 /// <summary>
 /// Base class for expected, client-facing errors. Throw one of its subclasses from any layer;

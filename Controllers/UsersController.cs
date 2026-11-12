@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using kuv_api.Exceptions;
-using kuv_api.Requests;
+using kuv_api.Models.Exceptions;
+using kuv_api.Models.Requests;
 using kuv_api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

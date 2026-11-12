@@ -1,7 +1,7 @@
 using kuv_api.Data;
-using kuv_api.Exceptions;
-using kuv_api.Models;
-using kuv_api.Requests;
+using kuv_api.Models.Exceptions;
+using kuv_api.Models.Entities;
+using kuv_api.Models.Requests;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

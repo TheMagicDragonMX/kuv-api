@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace kuv_api.Models;
+namespace kuv_api.Models.Messages;
 
 /// <summary>
 /// The one message shape spoken on the cube sockets, in both directions: a client sends commands to a cube, a cube

@@ -25,7 +25,7 @@ namespace kuv_api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("kuv_api.Models.Follow", b =>
+            modelBuilder.Entity("kuv_api.Models.Entities.Follow", b =>
                 {
                     b.Property<int>("FollowerId")
                         .HasColumnType("integer");
@@ -46,7 +46,7 @@ namespace kuv_api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("kuv_api.Models.User", b =>
+            modelBuilder.Entity("kuv_api.Models.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -83,15 +83,15 @@ namespace kuv_api.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("kuv_api.Models.Follow", b =>
+            modelBuilder.Entity("kuv_api.Models.Entities.Follow", b =>
                 {
-                    b.HasOne("kuv_api.Models.User", "Followed")
+                    b.HasOne("kuv_api.Models.Entities.User", "Followed")
                         .WithMany()
                         .HasForeignKey("FollowedId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("kuv_api.Models.User", "Follower")
+                    b.HasOne("kuv_api.Models.Entities.User", "Follower")
                         .WithMany()
                         .HasForeignKey("FollowerId")
                         .OnDelete(DeleteBehavior.Cascade)

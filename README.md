@@ -25,7 +25,7 @@ Browsers may call the API only from the origins listed in `Cors:AllowedOrigins` 
 
 ## Cube sockets (live commands)
 
-The API routes messages between cubes and the web app over WebSockets. It only routes; it does not know what the commands mean. Every frame, in both directions, is one JSON text message `{ "name", "id"?, "replyTo"?, "payload"? }` (`Models/CubeMessage.cs`).
+The API routes messages between cubes and the web app over WebSockets. It only routes; it does not know what the commands mean. Every frame, in both directions, is one JSON text message `{ "name", "id"?, "replyTo"?, "payload"? }` (`Models/Messages/CubeMessage.cs`).
 
 | Endpoint | Who | Authentication |
 |---|---|---|
@@ -56,7 +56,7 @@ Every endpoint needs `Authorization: Bearer <access token>`. What a profile says
 
 - A profile (`ProfileResponse`) has `id`, `username`, `email` (only your own), `description`, `photo`, `followers`, `following`, `followsYou`, `youFollow` and `isYou`.
 - A list entry (`UserSummaryResponse`) has `id`, `username`, `description`, `photo`, `followers`, `followsYou` and `youFollow`. `followsYou && youFollow` means they follow each other.
-- A follow is a row of `Follows` (`Models/Follow.cs`) keyed by the pair, so it exists once; a database check stops a user from following themselves.
+- A follow is a row of `Follows` (`Models/Entities/Follow.cs`) keyed by the pair, so it exists once; a database check stops a user from following themselves.
 - The migration `AddProfilesAndFollows` adds them; apply it with `dotnet ef database update`.
 
 ## EF Core commands
@@ -88,7 +88,7 @@ dotnet ef database update
 
 ## Error handling
 
-Expected errors are thrown as `KuvException`s (`Exceptions/`), which carry an HTTP status code and a message. Any layer (services, controllers) can throw one; controllers do not catch them.
+Expected errors are thrown as `KuvException`s (`Models/Exceptions/`), which carry an HTTP status code and a message. Any layer (services, controllers) can throw one; controllers do not catch them.
 
 | Exception               | Status |
 |-------------------------|--------|
@@ -105,3 +105,7 @@ throw new ConflictException("El nombre de usuario o correo ya está registrado."
 The global `KuvExceptionHandler` (registered in `Program.cs`) catches them and responds with the exception's status and a body of `{ "message": "..." }`. Any other exception is logged and returned as a generic `500`, without internal details.
 
 Methods never return `null` to signal failure; they throw instead. Nullable reference types are enabled project-wide in `kuv-api.csproj`.
+
+## Project layout
+
+Type-only files live under `Models/`, one folder per kind: `Entities/`, `Exceptions/`, `Requests/`, `Messages/` and `Responses/`. Classes with behavior stay in `Controllers/`, `Services/` and `Data/`.

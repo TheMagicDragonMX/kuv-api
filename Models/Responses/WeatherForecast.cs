@@ -1,4 +1,4 @@
-namespace kuv_api;
+namespace kuv_api.Models.Responses;
 
 /// <summary>
 /// Sample weather forecast returned by the template endpoint.

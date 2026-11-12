@@ -1,6 +1,6 @@
 using kuv_api.Data;
-using kuv_api.Models;
-using kuv_api.Requests;
+using kuv_api.Models.Entities;
+using kuv_api.Models.Requests;
 using kuv_api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

@@ -1,4 +1,4 @@
-namespace kuv_api.Requests;
+namespace kuv_api.Models.Requests;
 
 /// <summary>
 /// Credentials sent to log in.

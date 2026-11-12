@@ -24,7 +24,7 @@ namespace kuv_api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("kuv_api.Models.User", b =>
+            modelBuilder.Entity("kuv_api.Models.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

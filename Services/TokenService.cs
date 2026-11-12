@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using kuv_api.Data;
-using kuv_api.Models;
+using kuv_api.Models.Entities;
 using Microsoft.IdentityModel.Tokens;
 
 namespace kuv_api.Services;

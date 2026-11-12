@@ -1,4 +1,4 @@
-namespace kuv_api.Models;
+namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// An account that can authenticate against the API.

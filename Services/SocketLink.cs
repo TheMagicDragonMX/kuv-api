@@ -2,7 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using kuv_api.Models;
+using kuv_api.Models.Messages;
 
 namespace kuv_api.Services;
 

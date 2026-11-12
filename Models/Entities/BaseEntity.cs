@@ -1,4 +1,4 @@
-namespace kuv_api.Models;
+namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// Base class for all database entities.

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
-using kuv_api.Models;
+using kuv_api.Models.Messages;
 
 namespace kuv_api.Services;
 
