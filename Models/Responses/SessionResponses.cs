@@ -39,9 +39,9 @@ public sealed record GoogleSessionResponse
 }
 
 /// <summary>
-/// Whether a username can still be taken.
+/// Whether a username or an email can still be taken.
 /// </summary>
 /// <param name="Available">
-/// True when no user has the username.
+/// True when no user has it.
 /// </param>
-public sealed record UsernameAvailabilityResponse(bool Available);
+public sealed record AvailabilityResponse(bool Available);

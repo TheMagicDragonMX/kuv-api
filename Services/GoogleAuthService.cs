@@ -17,32 +17,15 @@ namespace kuv_api.Services;
 public sealed class GoogleAuthService(
     KuvDbContext dbContext,
     TokenService tokenService,
+    UserService userService,
     IConfiguration configuration
 )
 {
-    /// <summary>
-    /// Shortest username, in characters.
-    /// </summary>
-    public const int MinUsernameLength = 3;
-
-    /// <summary>
-    /// Longest username, in characters.
-    /// </summary>
-    public const int MaxUsernameLength = 50;
-
-    /// <summary>
-    /// Smallest age accepted.
-    /// </summary>
-    public const int MinAge = 0;
-
-    /// <summary>
-    /// Largest age accepted.
-    /// </summary>
-    public const int MaxAge = 150;
-
     private readonly KuvDbContext dbContext = dbContext;
 
     private readonly TokenService tokenService = tokenService;
+
+    private readonly UserService userService = userService;
 
     private readonly IConfiguration configuration = configuration;
 
@@ -124,12 +107,7 @@ public sealed class GoogleAuthService(
         var identity = tokenService.ReadGoogleSignupToken(request.SignupToken);
         var username = request.Username.Trim();
 
-        if (request.Age < MinAge || request.Age > MaxAge)
-        {
-            throw new BadRequestException($"La edad debe estar entre {MinAge} y {MaxAge}.");
-        }
-
-        CheckUsernameLength(username);
+        UserService.CheckAge(request.Age);
 
         var alreadyRegistered = await dbContext.Users.AnyAsync(user =>
             user.GoogleId == identity.Subject ||
@@ -141,7 +119,7 @@ public sealed class GoogleAuthService(
             throw new ConflictException("Esta cuenta de Google ya está registrada. Inicia sesión con ella.");
         }
 
-        if (!await IsUsernameAvailable(username))
+        if (!await userService.IsUsernameAvailable(username))
         {
             throw new ConflictException("Ese nombre de usuario ya está en uso.");
         }
@@ -158,27 +136,6 @@ public sealed class GoogleAuthService(
 
         // Issuing the tokens saves the new user together with its refresh token
         return await tokenService.IssueTokens(user);
-    }
-
-    /// <summary>
-    /// Whether nobody has a username yet, ignoring case and the spaces around it.
-    /// </summary>
-    /// <param name="username">
-    /// The username to look for.
-    /// </param>
-    /// <returns>
-    /// True when the username is free.
-    /// </returns>
-    /// <exception cref="BadRequestException">
-    /// The username is too short or too long.
-    /// </exception>
-    public async Task<bool> IsUsernameAvailable(string username)
-    {
-        var name = username.Trim();
-
-        CheckUsernameLength(name);
-
-        return !await dbContext.Users.AnyAsync(user => user.Username.ToLower() == name.ToLower());
     }
 
     /// <summary>
@@ -232,23 +189,6 @@ public sealed class GoogleAuthService(
         }
 
         return new GoogleIdentity(payload.Subject, payload.Email.Trim());
-    }
-
-    /// <summary>
-    /// Checks that a username is not too short or too long.
-    /// </summary>
-    /// <param name="username">
-    /// The username, already trimmed.
-    /// </param>
-    /// <exception cref="BadRequestException">
-    /// The username is too short or too long.
-    /// </exception>
-    private static void CheckUsernameLength(string username)
-    {
-        if (username.Length < MinUsernameLength || username.Length > MaxUsernameLength)
-        {
-            throw new BadRequestException($"El nombre de usuario debe tener entre {MinUsernameLength} y {MaxUsernameLength} caracteres.");
-        }
     }
 }
 

@@ -44,7 +44,7 @@ public class SessionController(
     /// 201 Created with the created user.
     /// </returns>
     /// <exception cref="ConflictException">
-    /// The username or email is already registered.
+    /// The email or the username is already registered; the message says which.
     /// </exception>
     [HttpPost("register")]
     public async Task<ActionResult<RegisteredUserResponse>> Register(RegisterRequest request)
@@ -139,9 +139,24 @@ public class SessionController(
     /// 200 OK saying whether it is available.
     /// </returns>
     [HttpGet("username-available")]
-    public async Task<ActionResult<UsernameAvailabilityResponse>> UsernameAvailable([FromQuery] string username)
+    public async Task<ActionResult<AvailabilityResponse>> UsernameAvailable([FromQuery] string username)
     {
-        return Ok(new UsernameAvailabilityResponse(await googleAuthService.IsUsernameAvailable(username)));
+        return Ok(new AvailabilityResponse(await userService.IsUsernameAvailable(username)));
+    }
+
+    /// <summary>
+    /// Tells whether an email is free, so the sign up can say so before asking for anything else.
+    /// </summary>
+    /// <param name="email">
+    /// The email to look for.
+    /// </param>
+    /// <returns>
+    /// 200 OK saying whether it is available.
+    /// </returns>
+    [HttpGet("email-available")]
+    public async Task<ActionResult<AvailabilityResponse>> EmailAvailable([FromQuery] string email)
+    {
+        return Ok(new AvailabilityResponse(await userService.IsEmailAvailable(email)));
     }
 
     /// <summary>
