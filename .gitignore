@@ -24,3 +24,6 @@ Desktop.ini
 # NuGet
 *.nupkg
 *.snupkg
+
+# Files users upload (profile photos); they live on the server, not in the repo
+uploads/
