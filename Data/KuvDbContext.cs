@@ -24,13 +24,16 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	public DbSet<Creation> Creations => Set<Creation>();
 
 	/// <summary>
-	/// Sets up the key and relations of the follows and creations.
+	/// Sets up the Google id of the users and the key and relations of the follows and creations.
 	/// </summary>
 	/// <param name="modelBuilder">
 	/// Builder of the model.
 	/// </param>
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
+		// Two users can never share a Google account (accounts without one all hold null, which a unique index allows)
+		modelBuilder.Entity<User>(entity => entity.HasIndex(user => user.GoogleId).IsUnique());
+
 		modelBuilder.Entity<Follow>(entity =>
 		{
 			entity.HasKey(follow => new { follow.FollowerId, follow.FollowedId });

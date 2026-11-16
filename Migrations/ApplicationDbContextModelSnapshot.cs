@@ -111,8 +111,10 @@ namespace kuv_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("GoogleId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Hashword")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Photo")
@@ -126,6 +128,9 @@ namespace kuv_api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GoogleId")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

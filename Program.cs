@@ -103,6 +103,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<GoogleAuthService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<CreationService>();
 builder.Services.AddSingleton<ICubeDirectory, ConfigCubeDirectory>();

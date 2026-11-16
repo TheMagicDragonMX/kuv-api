@@ -21,9 +21,15 @@ public class User : BaseEntity
 	public required int Age { get; set; }
 
 	/// <summary>
-	/// Hashed password; the plain-text password is never stored.
+	/// Hashed password; the plain-text password is never stored. Null for accounts created with Google,
+	/// which have no password and cannot log in with one.
 	/// </summary>
-	public required string Hashword { get; set; }
+	public string? Hashword { get; set; }
+
+	/// <summary>
+	/// Identifier of the user's Google account (the <c>sub</c> of its ID token). Null until the user signs in with Google.
+	/// </summary>
+	public string? GoogleId { get; set; }
 
 	/// <summary>
 	/// Hash of the current refresh token. Null while the user has no active session.

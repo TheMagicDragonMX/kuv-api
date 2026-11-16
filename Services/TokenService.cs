@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using kuv_api.Data;
 using kuv_api.Models.Entities;
+using kuv_api.Models.Exceptions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace kuv_api.Services;
@@ -16,6 +17,16 @@ public class TokenService(
     IConfiguration configuration
 )
 {
+    /// <summary>
+    /// Audience of the signup tokens. It differs from the one of the access tokens, so neither kind can be used as the other.
+    /// </summary>
+    private const string GoogleSignupAudience = "kuv-api-google-signup";
+
+    /// <summary>
+    /// Minutes a signup token stays valid: the time the user has to choose their age and username.
+    /// </summary>
+    private const int GoogleSignupMinutes = 15;
+
     private readonly KuvDbContext dbContext = dbContext;
 
     private readonly IConfiguration configuration = configuration;
@@ -61,6 +72,75 @@ public class TokenService(
         await dbContext.SaveChangesAsync();
 
         return new TokenResponse(accessToken, refreshToken, accessTokenLifetime.TotalSeconds);
+    }
+
+    /// <summary>
+    /// Issues the token that remembers a verified Google account while the user chooses their age and username.
+    /// It is signed by the API, so nobody can make one up.
+    /// </summary>
+    /// <param name="identity">
+    /// The Google account to remember.
+    /// </param>
+    /// <returns>
+    /// The signed token.
+    /// </returns>
+    public string IssueGoogleSignupToken(GoogleIdentity identity)
+    {
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
+        var token = new JwtSecurityToken(
+            issuer: configuration["Jwt:Issuer"],
+            audience: GoogleSignupAudience,
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, identity.Subject),
+                new Claim(JwtRegisteredClaimNames.Email, identity.Email)
+            ],
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(GoogleSignupMinutes),
+            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Reads a signup token, checking its signature, audience and expiry.
+    /// </summary>
+    /// <param name="token">
+    /// Token issued by <see cref="IssueGoogleSignupToken"/>.
+    /// </param>
+    /// <returns>
+    /// The Google account the token remembers.
+    /// </returns>
+    /// <exception cref="UnauthorizedException">
+    /// The token is not valid or has expired.
+    /// </exception>
+    public GoogleIdentity ReadGoogleSignupToken(string token)
+    {
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+
+        try
+        {
+            handler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)),
+                ValidateIssuer = true,
+                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = GoogleSignupAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(30)
+            }, out var validated);
+
+            var jwt = (JwtSecurityToken)validated;
+
+            return new GoogleIdentity(jwt.Subject, jwt.Claims.Single(claim => claim.Type == JwtRegisteredClaimNames.Email).Value);
+        }
+        catch (Exception exception) when (exception is SecurityTokenException or ArgumentException or InvalidOperationException)
+        {
+            throw new UnauthorizedException("Tu sesión de Google expiró. Vuelve a elegir tu cuenta.");
+        }
     }
 
     /// <summary>

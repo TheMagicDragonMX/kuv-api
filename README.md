@@ -19,6 +19,32 @@ Token lifetimes are set in the `Jwt` section of `appsettings.json`:
 - `Jwt:AccessTokenMinutes`: minutes an access token is valid (default `15`).
 - `Jwt:RefreshTokenDays`: days a refresh token is valid (default `7`).
 
+## Sessions and Google sign-in
+
+Everything under `/session` is public (no token needed). Whichever way a user gets in, they end up with the API's own access and refresh tokens (`TokenResponse`), so the rest of the API does not know how the user signed in.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /session/register` | Creates an account with a username, email, age and password. |
+| `POST /session/login` | `{ username, password }`. The `username` field accepts the username **or the email**, ignoring case. A Google-only account answers `401` with a message saying to use Google. |
+| `POST /session/refresh` | Exchanges a refresh token for a new pair (each refresh token works once). |
+| `POST /session/google` | `{ idToken }` with the ID token Google gave the browser. Answers `{ status: "signedIn", tokens }`, or `{ status: "needsProfile", signupToken, email }` when no user has that Google account yet. |
+| `POST /session/google/complete` | `{ signupToken, age, username }`. Creates the account and answers the tokens. |
+| `GET /session/username-available?username=` | `{ available }`, ignoring case. |
+
+How `POST /session/google` decides (`Services/GoogleAuthService.cs`):
+
+1. The ID token is checked with Google (signature, issuer, expiry, and that its audience is `Google:ClientId`). Google must also have verified the email.
+2. A user with that Google id (`Users.GoogleId`) signs in.
+3. Otherwise a user with the same email (ignoring case) **is linked**: their `GoogleId` is saved and they sign in. If that user is already linked to a different Google account the answer is `409`.
+4. Otherwise nothing is created yet. The API answers `needsProfile` with a `signupToken`: a short-lived JWT (15 minutes) signed by the API that remembers the verified Google id and email. Its audience differs from the access tokens', so neither can be used as the other. The client asks for the age (`0`-`150`) and a unique username (`3`-`50` characters, compared ignoring case), then calls `/session/google/complete`.
+
+Accounts created with Google have no password (`Users.Hashword` is null) and can only sign in with Google. Linked accounts keep their password.
+
+Configuration: set `Google:ClientId` (environment variable `Google__ClientId`) to the OAuth client ID of the Google Cloud project; for local development put `Google__ClientId=...` in `.env`. Deployment fills it from the `GOOGLE_CLIENT_ID` repository variable (`Deploy/kuv-api.env`). Without it, `/session/google` answers `500` and password login keeps working. The same client ID goes in the web app's `environments/*.ts`. No client secret is needed: the API only verifies tokens, it never talks to Google on the user's behalf.
+
+The migration `AddGoogleSignIn` adds `Users.GoogleId` (unique) and makes `Users.Hashword` nullable; apply it with `dotnet ef database update`.
+
 ## CORS
 
 Browsers may call the API only from the origins listed in `Cors:AllowedOrigins` (`appsettings.json`: `https://kuv.lol`; `appsettings.Development.json` adds `http://localhost:4200`). Any header and method is allowed. To add an origin, edit that list or set `Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`... as environment variables.
