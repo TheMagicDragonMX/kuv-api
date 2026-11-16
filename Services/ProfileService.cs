@@ -9,30 +9,23 @@ namespace kuv_api.Services;
 /// <summary>
 /// Handles profiles and who follows whom. Every method takes the id of the signed-in user
 /// (the viewer), because what a profile says (whether they follow each other) depends on who looks.
+/// The profile pictures are files, kept by <see cref="ProfilePhotoService"/>.
 /// </summary>
-public sealed class ProfileService(KuvDbContext dbContext)
+public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService photos)
 {
     /// <summary>
-    /// Longest description a profile can have, in characters.
+    /// Longest bio a profile can have, in characters.
     /// </summary>
-    public const int MaxDescriptionLength = 280;
-
-    /// <summary>
-    /// Longest profile picture, in characters of its data URL (about 300 KB of image).
-    /// </summary>
-    public const int MaxPhotoLength = 400_000;
+    public const int MaxBioLength = 280;
 
     /// <summary>
     /// Most users a search answers with.
     /// </summary>
     private const int SearchLimit = 20;
 
-    /// <summary>
-    /// Start of the data URLs accepted as a profile picture.
-    /// </summary>
-    private static readonly string[] PhotoPrefixes = ["data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,", "data:image/gif;base64,"];
-
     private readonly KuvDbContext dbContext = dbContext;
+
+    private readonly ProfilePhotoService photos = photos;
 
     /// <summary>
     /// The profile of a user as the viewer sees it.
@@ -57,8 +50,8 @@ public sealed class ProfileService(KuvDbContext dbContext)
                 user.Id,
                 user.Username,
                 user.Id == viewerId ? user.Email : null,
-                user.Description,
-                user.Photo,
+                user.Bio,
+                null,
                 dbContext.Follows.Count(follow => follow.FollowedId == user.Id),
                 dbContext.Follows.Count(follow => follow.FollowerId == user.Id),
                 dbContext.Follows.Any(follow =>
@@ -71,52 +64,110 @@ public sealed class ProfileService(KuvDbContext dbContext)
                 ),
                 user.Id == viewerId
             ))
-            .SingleOrDefaultAsync();
+            .SingleOrDefaultAsync()
+            ?? throw new NotFoundException("Ese usuario no existe.");
 
-        return profile ?? throw new NotFoundException("Ese usuario no existe.");
+        // The picture is a file, so it cannot be part of the query
+        return profile with { Photo = photos.UrlFor(profile.Id) };
     }
 
     /// <summary>
-    /// Changes the description and picture of the viewer.
+    /// Changes the bio of the viewer.
     /// </summary>
     /// <param name="viewerId">
     /// The signed-in user.
     /// </param>
     /// <param name="request">
-    /// The new data; a blank field is cleared.
+    /// The new data; a blank bio is cleared.
     /// </param>
     /// <returns>
     /// The profile after the change.
     /// </returns>
     /// <exception cref="BadRequestException">
-    /// The description is too long, or the picture is not an image data URL or is too big.
+    /// The bio is too long.
     /// </exception>
     /// <exception cref="NotFoundException">
     /// The viewer no longer exists.
     /// </exception>
     public async Task<ProfileResponse> UpdateProfile(int viewerId, UpdateProfileRequest request)
     {
-        var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-        var photo = string.IsNullOrWhiteSpace(request.Photo) ? null : request.Photo;
+        var bio = string.IsNullOrWhiteSpace(request.Bio) ? null : request.Bio.Trim();
 
-        if (description is not null && description.Length > MaxDescriptionLength)
+        if (bio is not null && bio.Length > MaxBioLength)
         {
-            throw new BadRequestException($"La descripción puede tener hasta {MaxDescriptionLength} caracteres.");
-        }
-
-        if (photo is not null && (photo.Length > MaxPhotoLength || !PhotoPrefixes.Any(prefix => photo.StartsWith(prefix, StringComparison.Ordinal))))
-        {
-            throw new BadRequestException("La foto debe ser una imagen PNG, JPEG, WebP o GIF de hasta 300 KB.");
+            throw new BadRequestException($"La biografía puede tener hasta {MaxBioLength} caracteres.");
         }
 
         var viewer = await dbContext.Users.SingleOrDefaultAsync(user => user.Id == viewerId)
             ?? throw new NotFoundException("Ese usuario no existe.");
 
-        viewer.Description = description;
-        viewer.Photo = photo;
+        viewer.Bio = bio;
         await dbContext.SaveChangesAsync();
 
         return await GetProfile(viewerId, viewerId);
+    }
+
+    /// <summary>
+    /// Sets the profile picture of the viewer, replacing the one they had.
+    /// </summary>
+    /// <param name="viewerId">
+    /// The signed-in user.
+    /// </param>
+    /// <param name="request">
+    /// The image.
+    /// </param>
+    /// <returns>
+    /// The profile after the change.
+    /// </returns>
+    /// <exception cref="BadRequestException">
+    /// The file is not a PNG, JPEG, WebP or GIF of up to 300 KB.
+    /// </exception>
+    /// <exception cref="NotFoundException">
+    /// The viewer no longer exists.
+    /// </exception>
+    public async Task<ProfileResponse> SetPhoto(int viewerId, UpdatePhotoRequest request)
+    {
+        await EnsureExists(viewerId);
+        await photos.Save(viewerId, request.Photo);
+
+        return await GetProfile(viewerId, viewerId);
+    }
+
+    /// <summary>
+    /// Removes the profile picture of the viewer.
+    /// </summary>
+    /// <param name="viewerId">
+    /// The signed-in user.
+    /// </param>
+    /// <returns>
+    /// The profile after the change.
+    /// </returns>
+    /// <exception cref="NotFoundException">
+    /// The viewer no longer exists.
+    /// </exception>
+    public async Task<ProfileResponse> RemovePhoto(int viewerId)
+    {
+        await EnsureExists(viewerId);
+        photos.Delete(viewerId);
+
+        return await GetProfile(viewerId, viewerId);
+    }
+
+    /// <summary>
+    /// The profile picture of a user.
+    /// </summary>
+    /// <param name="userId">
+    /// The user whose picture is wanted.
+    /// </param>
+    /// <returns>
+    /// The file, with its type and the moment it was saved.
+    /// </returns>
+    /// <exception cref="NotFoundException">
+    /// The user has no picture.
+    /// </exception>
+    public StoredPhoto GetPhoto(int userId)
+    {
+        return photos.Find(userId);
     }
 
     /// <summary>
@@ -290,13 +341,14 @@ public sealed class ProfileService(KuvDbContext dbContext)
     /// <summary>
     /// The users of a query as list entries, as the viewer sees them.
     /// </summary>
-    private async Task<List<UserSummaryResponse>> Summaries(int viewerId, IQueryable<User> users) =>
-        await users
+    private async Task<List<UserSummaryResponse>> Summaries(int viewerId, IQueryable<User> users)
+    {
+        var summaries = await users
             .Select(user => new UserSummaryResponse(
                 user.Id,
                 user.Username,
-                user.Description,
-                user.Photo,
+                user.Bio,
+                null,
                 dbContext.Follows.Count(follow => follow.FollowedId == user.Id),
                 dbContext.Follows.Any(follow =>
                     follow.FollowerId == user.Id &&
@@ -308,6 +360,10 @@ public sealed class ProfileService(KuvDbContext dbContext)
                 )
             ))
             .ToListAsync();
+
+        // The pictures are files, so they cannot be part of the query
+        return summaries.Select(summary => summary with { Photo = photos.UrlFor(summary.Id) }).ToList();
+    }
 }
 
 /// <summary>
@@ -322,11 +378,12 @@ public sealed class ProfileService(KuvDbContext dbContext)
 /// <param name="Email">
 /// Email of the user; only present on the viewer's own profile.
 /// </param>
-/// <param name="Description">
+/// <param name="Bio">
 /// What the user tells about themselves, if anything.
 /// </param>
 /// <param name="Photo">
-/// Profile picture as a data URL, if any.
+/// Where the profile picture can be fetched from (a path on this API, such as <c>/users/7/photo?v=...</c>), or null
+/// when the user has none.
 /// </param>
 /// <param name="Followers">
 /// How many users follow them.
@@ -347,7 +404,7 @@ public sealed record ProfileResponse(
     int Id,
     string Username,
     string? Email,
-    string? Description,
+    string? Bio,
     string? Photo,
     int Followers,
     int Following,
@@ -365,11 +422,12 @@ public sealed record ProfileResponse(
 /// <param name="Username">
 /// Username of the user.
 /// </param>
-/// <param name="Description">
+/// <param name="Bio">
 /// What the user tells about themselves, if anything.
 /// </param>
 /// <param name="Photo">
-/// Profile picture as a data URL, if any.
+/// Where the profile picture can be fetched from (a path on this API, such as <c>/users/7/photo?v=...</c>), or null
+/// when the user has none.
 /// </param>
 /// <param name="Followers">
 /// How many users follow them.
@@ -383,7 +441,7 @@ public sealed record ProfileResponse(
 public sealed record UserSummaryResponse(
     int Id,
     string Username,
-    string? Description,
+    string? Bio,
     string? Photo,
     int Followers,
     bool FollowsYou,

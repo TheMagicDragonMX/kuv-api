@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace kuv_api.Controllers;
 
 /// <summary>
-/// Profiles and follows. Every endpoint needs the access token of a signed-in user.
+/// Profiles and follows. Every endpoint needs the access token of a signed-in user, except the one that serves a profile picture.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -35,16 +35,16 @@ public class UsersController(ProfileService profileService) : ControllerBase
         Ok(await profileService.GetProfile(ViewerId(), ViewerId()));
 
     /// <summary>
-    /// Changes the description and picture of the signed-in user.
+    /// Changes the bio of the signed-in user.
     /// </summary>
     /// <param name="request">
-    /// The new data; a blank field is cleared.
+    /// The new data; a blank bio is cleared.
     /// </param>
     /// <returns>
     /// 200 OK with the profile after the change.
     /// </returns>
     /// <exception cref="BadRequestException">
-    /// The description is too long, or the picture is not valid.
+    /// The bio is too long.
     /// </exception>
     /// <exception cref="UnauthorizedException">
     /// The token has no valid user.
@@ -52,6 +52,70 @@ public class UsersController(ProfileService profileService) : ControllerBase
     [HttpPut("me")]
     public async Task<ActionResult<ProfileResponse>> UpdateMe(UpdateProfileRequest request) =>
         Ok(await profileService.UpdateProfile(ViewerId(), request));
+
+    /// <summary>
+    /// Sets the profile picture of the signed-in user, replacing the one they had.
+    /// </summary>
+    /// <param name="request">
+    /// The image, as a multipart form with a <c>photo</c> file.
+    /// </param>
+    /// <returns>
+    /// 200 OK with the profile after the change.
+    /// </returns>
+    /// <exception cref="BadRequestException">
+    /// The file is not a PNG, JPEG, WebP or GIF of up to 300 KB.
+    /// </exception>
+    /// <exception cref="UnauthorizedException">
+    /// The token has no valid user.
+    /// </exception>
+    [HttpPut("me/photo")]
+    public async Task<ActionResult<ProfileResponse>> SetMyPhoto([FromForm] UpdatePhotoRequest request) =>
+        Ok(await profileService.SetPhoto(ViewerId(), request));
+
+    /// <summary>
+    /// Removes the profile picture of the signed-in user.
+    /// </summary>
+    /// <returns>
+    /// 200 OK with the profile after the change.
+    /// </returns>
+    /// <exception cref="UnauthorizedException">
+    /// The token has no valid user.
+    /// </exception>
+    [HttpDelete("me/photo")]
+    public async Task<ActionResult<ProfileResponse>> RemoveMyPhoto() =>
+        Ok(await profileService.RemovePhoto(ViewerId()));
+
+    /// <summary>
+    /// The profile picture of a user. It needs no token, so a plain image element can load it; the address the
+    /// profiles give ends in <c>?v=</c> and changes with the picture, so the answer can be cached for a year.
+    /// </summary>
+    /// <param name="id">
+    /// Identifier of the user.
+    /// </param>
+    /// <param name="v">
+    /// Version of the picture, from the address a profile gives. Only used to tell the cache the picture changed.
+    /// </param>
+    /// <returns>
+    /// 200 OK with the image.
+    /// </returns>
+    /// <exception cref="NotFoundException">
+    /// The user has no picture.
+    /// </exception>
+    [AllowAnonymous]
+    [HttpGet("{id:int}/photo")]
+    public IActionResult Photo(int id, [FromQuery] long? v)
+    {
+        var photo = profileService.GetPhoto(id);
+
+        // The type is decided by the server from the content, so the browser must not guess another
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.CacheControl = v is null ? "no-cache" : "public, max-age=31536000, immutable";
+
+        return new PhysicalFileResult(photo.FilePath, photo.ContentType)
+        {
+            LastModified = new DateTimeOffset(photo.LastModified)
+        };
+    }
 
     /// <summary>
     /// Finds users by part of their name.

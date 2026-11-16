@@ -73,6 +73,7 @@ jobs:
           SOURCE: "./publish/"
           TARGET: "/var/www/kuv-api"
           ARGS: "-rlgoDzP --delete"
+          EXCLUDE: "/uploads/"
           SCRIPT_AFTER: sudo systemctl restart kuv-api.service
 
       #

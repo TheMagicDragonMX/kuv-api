@@ -104,7 +104,7 @@ namespace kuv_api.Migrations
                     b.Property<int>("Age")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("Bio")
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
@@ -115,9 +115,6 @@ namespace kuv_api.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Hashword")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Photo")
                         .HasColumnType("text");
 
                     b.Property<string>("RefreshToken")

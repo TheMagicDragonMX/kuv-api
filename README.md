@@ -67,12 +67,15 @@ The API routes messages between cubes and the web app over WebSockets. It only r
 
 ## Profiles and follows
 
-Every endpoint needs `Authorization: Bearer <access token>`. What a profile says (whether two users follow each other) depends on who asks, so the answers are always "as the signed-in user sees them" (`Services/ProfileService.cs`).
+Every endpoint needs `Authorization: Bearer <access token>`, except `GET /users/{id}/photo`. What a profile says (whether two users follow each other) depends on who asks, so the answers are always "as the signed-in user sees them" (`Services/ProfileService.cs`).
 
 | Endpoint | What it does |
 |---|---|
 | `GET /users/me` | The signed-in user's profile, with their email. |
-| `PUT /users/me` | Changes `description` (up to 280 characters) and `photo` (a `data:image/png\|jpeg\|webp\|gif;base64,...` URL of up to 400 000 characters). A blank field is cleared. |
+| `PUT /users/me` | Changes `bio` (up to 280 characters). A blank bio is cleared. |
+| `PUT /users/me/photo` | Sets the profile picture: a multipart form with a `photo` file (PNG, JPEG, WebP or GIF, up to 300 KB). Answers the profile. |
+| `DELETE /users/me/photo` | Removes the profile picture (doing it with none changes nothing). Answers the profile. |
+| `GET /users/{id}/photo` | The picture itself. **No token needed**, so a plain `<img>` can load it. `404` when the user has none. |
 | `GET /users?search=<text>` | Up to 20 users whose name contains the text (not the signed-in user). |
 | `GET /users/{id}` | A user's profile, without their email. |
 | `GET /users/{id}/followers` | Who follows the user, the most recent first. |
@@ -80,10 +83,20 @@ Every endpoint needs `Authorization: Bearer <access token>`. What a profile says
 | `PUT /users/{id}/follow` | The signed-in user follows them (doing it twice changes nothing). |
 | `DELETE /users/{id}/follow` | The signed-in user stops following them. |
 
-- A profile (`ProfileResponse`) has `id`, `username`, `email` (only your own), `description`, `photo`, `followers`, `following`, `followsYou`, `youFollow` and `isYou`.
-- A list entry (`UserSummaryResponse`) has `id`, `username`, `description`, `photo`, `followers`, `followsYou` and `youFollow`. `followsYou && youFollow` means they follow each other.
+- A profile (`ProfileResponse`) has `id`, `username`, `email` (only your own), `bio`, `photo`, `followers`, `following`, `followsYou`, `youFollow` and `isYou`.
+- A list entry (`UserSummaryResponse`) has `id`, `username`, `bio`, `photo`, `followers`, `followsYou` and `youFollow`. `followsYou && youFollow` means they follow each other.
+- `photo` is `null` when the user has no picture, otherwise a **path on this API** such as `/users/7/photo?v=639304580747926611`: put the API address in front of it. `v` is the moment the picture was saved, so the address changes whenever the picture does.
 - A follow is a row of `Follows` (`Models/Entities/Follow.cs`) keyed by the pair, so it exists once; a database check stops a user from following themselves.
 - The migration `AddProfilesAndFollows` adds them; apply it with `dotnet ef database update`.
+
+### Profile pictures
+
+Pictures are not in the database. Each is a file in `uploads/pfp`, named after the user's id and the type of the image (`7.png`, `7.jpg`, `7.webp` or `7.gif`); a user has at most one, and a user has a picture when its file exists (`Services/ProfilePhotoService.cs`).
+
+- The type is read from the first bytes of the file, never from its name or the `Content-Type` the client sends, so a file that is not really an image is refused (`400`) and the served `Content-Type` is always right. Pictures are served with `X-Content-Type-Options: nosniff`.
+- `GET /users/{id}/photo` answers `Cache-Control: public, max-age=31536000, immutable` when the address has `?v=` (the ones the profiles give) and supports `If-Modified-Since`.
+- The pictures are public to anyone who knows a user id, which is no more than any registered account can already see (registration is open).
+- `uploads/` is created by the API next to its binaries and is **data, not part of the deploy**: the deploy workflow excludes it from `rsync --delete`. Back it up with the database.
 
 ## EF Core commands
 

@@ -38,11 +38,7 @@ public class User : BaseEntity
 
 	/// <summary>
 	/// What the user tells about themselves on their profile. Null until they write it.
+	/// The profile picture is not stored here: it is a file in <c>uploads/pfp</c> (see <c>ProfilePhotoService</c>).
 	/// </summary>
-	public string? Description { get; set; }
-
-	/// <summary>
-	/// Profile picture as a data URL (<c>data:image/...;base64,...</c>). Null until they choose one.
-	/// </summary>
-	public string? Photo { get; set; }
+	public string? Bio { get; set; }
 }
