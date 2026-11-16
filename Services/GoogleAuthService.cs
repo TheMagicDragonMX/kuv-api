@@ -132,9 +132,10 @@ public sealed class GoogleAuthService(
             GoogleId = identity.Subject
         };
 
+        // Saved first: the database gives the id, and the access token names the user by it
         dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
 
-        // Issuing the tokens saves the new user together with its refresh token
         return await tokenService.IssueTokens(user);
     }
 
