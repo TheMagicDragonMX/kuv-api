@@ -33,6 +33,11 @@ Follow these rules whenever you write or modify code in this project.
 - `TimestampedEntity` gives `CreatedAt`; `UpdatableEntity` adds `UpdatedAt`; `BaseEntity` adds the `Id` key. Entities with an `Id` extend `BaseEntity`; an entity with a composite key (`Follow`) extends `TimestampedEntity`.
 - `KuvDbContext.SaveChanges` stamps the times: `CreatedAt` on insert, `UpdatedAt` on insert and update. Never set them by hand.
 
+## 3c. Creations
+
+- The database never holds the program of a creation. It lives in `uploads/creations/{id}/program.json`, next to its video; everything about those files goes through `CreationStorage`.
+- The format of `program.json` is `Schemas/program-file.schema.json`. Every program file is validated by `ProgramFileValidator` before it is stored. Per-block fields are validated by the client engine, not by the schema. A change to the program format changes the schema, `kuv-client` and `kuv-cube` together.
+
 ## 4. Document what you create
 
 - Always write XML doc tags on multiple lines (opening tag, content, closing tag each on its own `///` line), even when the content is short. Never use the one-line form `/// <summary>Text</summary>`.

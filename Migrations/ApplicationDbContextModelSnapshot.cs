@@ -39,15 +39,16 @@ namespace kuv_api.Migrations
                     b.Property<double>("DurationSeconds")
                         .HasColumnType("double precision");
 
-                    b.Property<string>("EnvironmentJson")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("ProgramJson")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<string>("LegacyEnvironmentJson")
+                        .HasColumnType("text")
+                        .HasColumnName("EnvironmentJson");
+
+                    b.Property<string>("LegacyProgramJson")
+                        .HasColumnType("text")
+                        .HasColumnName("ProgramJson");
 
                     b.Property<string>("Title")
                         .IsRequired()

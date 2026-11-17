@@ -103,6 +103,37 @@ Pictures are not in the database. Each is a file in `uploads/pfp`, named after t
 - The pictures are public to anyone who knows a user id, which is no more than any registered account can already see (registration is open).
 - `uploads/` is created by the API next to its binaries and is **data, not part of the deploy**: the deploy workflow excludes it from `rsync --delete`. Back it up with the database.
 
+## Creations
+
+A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, duration of the recording, the name of its video, and when it was created and updated. **Its folder holds the program**: `uploads/creations/{id}/` has `program.json` and the video (`video.webm` or `video.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
+
+```
+uploads/creations/7/
+├── program.json     the complete program (see below)
+└── video.webm       the recording of the last save
+```
+
+### The program file
+
+`program.json` is the complete program of the cube: the program it runs and the environment (stage) it runs on. Its format is defined by [`Schemas/program-file.schema.json`](Schemas/program-file.schema.json) (JSON Schema 2020-12, embedded in the API), and `Services/ProgramFileValidator.cs` checks every program file against it before anything is stored; a document that does not follow it is refused with `400` and a message saying where (`/program/scripts/0/trigger/seconds: 0 should be greater than 0`).
+
+```json
+{
+  "version": 1,
+  "program": { "version": 1, "objects": [], "scripts": [ { "trigger": { "type": "start" }, "blocks": [] } ] },
+  "environment": { "background": { "FRONT": ["#000000", "..."] }, "brightness": { "objects": 1 } }
+}
+```
+
+- The schema fixes the structure: `version`, `program` (`version`, `config`, `objects` as `create` blocks, `scripts` with a trigger and blocks that have an `op`) and `environment` (`background`, `backgrounds`, `startBackground`, `brightness`). Pictures are 64 × 64 colors written `#RRGGBB`, like the ones in the blocks.
+- The fields of each block are **not** in the schema: they are checked by the engine (`kuv-client/src/app/cube/engine/blocks`), so they live in one place only. When the structure changes, change the schema, `program.ts` in the client and the Python port together, and bump `version`.
+
+### Endpoints
+
+- Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
+- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `durationSeconds`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
+- Creations saved before this change had the program in the database and the video loose in `uploads/creations`. `Services/LegacyCreationImporter.cs` moves each one to its folder when the API starts (it does nothing once they are all moved) and empties the old `Creations.ProgramJson` / `EnvironmentJson` columns. The migration `CreationFolders` only makes `ProgramJson` nullable; **once every database has run the API with the importer, a later migration drops both columns and `Creation.LegacyProgramJson` / `LegacyEnvironmentJson`.** Do not drop them in the same deploy as the importer.
+
 ## EF Core commands
 
 Restore the local EF CLI tool once:

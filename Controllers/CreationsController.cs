@@ -38,10 +38,10 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	}
 
 	/// <summary>
-	/// Returns a specific creation by ID.
+	/// Returns a specific creation by ID, with its program file.
 	/// </summary>
 	[HttpGet("{id:int}")]
-	public async Task<ActionResult<CreationResponse>> GetCreation(int id)
+	public async Task<ActionResult<CreationDetailResponse>> GetCreation(int id)
 	{
 		return Ok(await creationService.GetCreation(ViewerId(), id));
 	}
@@ -62,7 +62,7 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	[HttpPost]
 	[Consumes("multipart/form-data")]
 	[RequestSizeLimit(100 * 1024 * 1024)]
-	public async Task<ActionResult<CreationResponse>> Create([FromForm] CreateCreationRequest request)
+	public async Task<ActionResult<CreationDetailResponse>> Create([FromForm] CreateCreationRequest request)
 	{
 		var response = await creationService.Create(ViewerId(), request);
 		return CreatedAtAction(nameof(GetCreation), new { id = response.Id }, response);
@@ -74,7 +74,7 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	[HttpPut("{id:int}")]
 	[Consumes("multipart/form-data")]
 	[RequestSizeLimit(100 * 1024 * 1024)]
-	public async Task<ActionResult<CreationResponse>> Update(int id, [FromForm] UpdateCreationRequest request)
+	public async Task<ActionResult<CreationDetailResponse>> Update(int id, [FromForm] UpdateCreationRequest request)
 	{
 		return Ok(await creationService.Update(ViewerId(), id, request));
 	}
@@ -89,7 +89,7 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	}
 
 	/// <summary>
-	/// Deletes a creation and its video file.
+	/// Deletes a creation and its folder, with its program file and its video.
 	/// </summary>
 	[HttpDelete("{id:int}")]
 	public async Task<IActionResult> Delete(int id)

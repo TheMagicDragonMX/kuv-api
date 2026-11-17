@@ -7,12 +7,12 @@ using Microsoft.EntityFrameworkCore;
 namespace kuv_api.Services;
 
 /// <summary>
-/// Manages user creations and video files on disk.
+/// Manages user creations: what describes them is in the database, and each one has its own folder on disk with its
+/// program file and its video (see <see cref="CreationStorage"/>).
 /// </summary>
-public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environment)
+public sealed class CreationService(KuvDbContext db, CreationStorage storage, ProgramFileValidator validator)
 {
 	private readonly KuvDbContext db = db;
-	private readonly string storageDirectory = Path.Combine(environment.ContentRootPath, "uploads", "creations");
 
 	/// <summary>
 	/// Gets the full path and content type for a creation's video file.
@@ -32,7 +32,7 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			throw new NotFoundException("This creation does not have a video file.");
 		}
 
-		var fullPath = Path.Combine(storageDirectory, creation.VideoFileName);
+		var fullPath = storage.VideoPath(creation.Id, creation.VideoFileName);
 		if (!File.Exists(fullPath))
 		{
 			throw new NotFoundException("The video file was not found on the server.");
@@ -74,7 +74,7 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 	/// <summary>
 	/// Returns a specific creation by ID if owned by the viewer or if public.
 	/// </summary>
-	public async Task<CreationResponse> GetCreation(int viewerId, int creationId)
+	public async Task<CreationDetailResponse> GetCreation(int viewerId, int creationId)
 	{
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
@@ -84,31 +84,27 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			throw new ForbiddenException("You cannot access this creation.");
 		}
 
-		return ToResponse(creation);
+		return await ToDetailResponse(creation);
 	}
 
 	/// <summary>
-	/// Creates a new creation and optionally stores its video file.
+	/// Creates a new creation: a row in the database, a folder with its program file and, when given, its video.
 	/// </summary>
-	public async Task<CreationResponse> Create(int userId, CreateCreationRequest request)
+	public async Task<CreationDetailResponse> Create(int userId, CreateCreationRequest request)
 	{
 		if (string.IsNullOrWhiteSpace(request.Title))
 		{
 			throw new BadRequestException("Title is required.");
 		}
 
-		if (string.IsNullOrWhiteSpace(request.ProgramJson))
-		{
-			throw new BadRequestException("ProgramJson is required.");
-		}
+		// Checked before anything is stored, so a bad program leaves no row and no folder behind
+		var programFile = validator.Parse(request.ProgramFile);
 
 		var creation = new Creation
 		{
 			UserId = userId,
 			Title = request.Title.Trim(),
 			Description = request.Description?.Trim(),
-			ProgramJson = request.ProgramJson,
-			EnvironmentJson = request.EnvironmentJson,
 			DurationSeconds = request.DurationSeconds,
 			IsPublic = request.IsPublic,
 		};
@@ -116,20 +112,35 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 		db.Creations.Add(creation);
 		await db.SaveChangesAsync();
 
-		if (request.Video != null && 0 < request.Video.Length)
+		try
 		{
-			creation.VideoFileName = await SaveVideoFile(creation.Id, request.Video);
-			creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
-			await db.SaveChangesAsync();
+			await storage.WriteProgramFile(creation.Id, programFile);
+
+			if (request.Video != null && 0 < request.Video.Length)
+			{
+				creation.VideoFileName = await storage.WriteVideo(creation.Id, request.Video);
+				creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
+				await db.SaveChangesAsync();
+			}
 		}
 
-		return ToResponse(creation);
+		catch
+		{
+			// A creation without its files would be unusable, so it is taken back
+			storage.DeleteFolder(creation.Id);
+			db.Creations.Remove(creation);
+			await db.SaveChangesAsync();
+
+			throw;
+		}
+
+		return new CreationDetailResponse(ToResponse(creation), programFile);
 	}
 
 	/// <summary>
 	/// Updates an existing creation.
 	/// </summary>
-	public async Task<CreationResponse> Update(int userId, int creationId, UpdateCreationRequest request)
+	public async Task<CreationDetailResponse> Update(int userId, int creationId, UpdateCreationRequest request)
 	{
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
@@ -139,22 +150,15 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			throw new ForbiddenException("You are not allowed to edit this creation.");
 		}
 
+		// Checked before anything changes, so a bad program leaves the creation as it was
+		var programFile = string.IsNullOrWhiteSpace(request.ProgramFile) ? null : validator.Parse(request.ProgramFile);
+
 		if (!string.IsNullOrWhiteSpace(request.Title))
 		{
 			creation.Title = request.Title.Trim();
 		}
 
 		creation.Description = request.Description?.Trim();
-
-		if (!string.IsNullOrWhiteSpace(request.ProgramJson))
-		{
-			creation.ProgramJson = request.ProgramJson;
-		}
-
-		if (request.EnvironmentJson != null)
-		{
-			creation.EnvironmentJson = request.EnvironmentJson;
-		}
 
 		if (0 < request.DurationSeconds)
 		{
@@ -166,16 +170,20 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			creation.IsPublic = request.IsPublic.Value;
 		}
 
+		if (programFile != null)
+		{
+			await storage.WriteProgramFile(creation.Id, programFile);
+		}
+
 		if (request.Video != null && 0 < request.Video.Length)
 		{
-			DeleteVideoFile(creation.VideoFileName);
-			creation.VideoFileName = await SaveVideoFile(creation.Id, request.Video);
+			creation.VideoFileName = await storage.WriteVideo(creation.Id, request.Video);
 			creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
 		}
 
 		await db.SaveChangesAsync();
 
-		return ToResponse(creation);
+		return await ToDetailResponse(creation);
 	}
 
 	/// <summary>
@@ -210,48 +218,25 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			throw new ForbiddenException("You are not allowed to delete this creation.");
 		}
 
-		DeleteVideoFile(creation.VideoFileName);
 		db.Creations.Remove(creation);
 		await db.SaveChangesAsync();
+
+		// The row goes first: a folder left behind is only clutter, a row without its folder is a broken creation
+		storage.DeleteFolder(creation.Id);
 	}
 
-	private async Task<string> SaveVideoFile(int creationId, IFormFile file)
+	/// <summary>
+	/// The creation with the program file read from its folder.
+	/// </summary>
+	/// <exception cref="NotFoundException">
+	/// The creation has no program file on disk.
+	/// </exception>
+	private async Task<CreationDetailResponse> ToDetailResponse(Creation creation)
 	{
-		Directory.CreateDirectory(storageDirectory);
-		var extension = Path.GetExtension(file.FileName);
-		if (string.IsNullOrWhiteSpace(extension))
-		{
-			extension = ".webm";
-		}
+		var programFile = await storage.ReadProgramFile(creation.Id)
+			?? throw new NotFoundException($"The program file of creation {creation.Id} was not found on the server.");
 
-		var fileName = $"{creationId}_{Guid.NewGuid():N}{extension}";
-		var fullPath = Path.Combine(storageDirectory, fileName);
-
-		using var stream = File.Create(fullPath);
-		await file.CopyToAsync(stream);
-
-		return fileName;
-	}
-
-	private void DeleteVideoFile(string? fileName)
-	{
-		if (string.IsNullOrWhiteSpace(fileName))
-		{
-			return;
-		}
-
-		try
-		{
-			var fullPath = Path.Combine(storageDirectory, fileName);
-			if (File.Exists(fullPath))
-			{
-				File.Delete(fullPath);
-			}
-		}
-		catch
-		{
-			// Best-effort cleanup
-		}
+		return new CreationDetailResponse(ToResponse(creation), programFile);
 	}
 
 	private static CreationResponse ToResponse(Creation creation)
@@ -261,8 +246,6 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			creation.UserId,
 			creation.Title,
 			creation.Description,
-			creation.ProgramJson,
-			creation.EnvironmentJson,
 			creation.DurationSeconds,
 			!string.IsNullOrWhiteSpace(creation.VideoFileName),
 			creation.IsPublic,
@@ -271,4 +254,3 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 		);
 	}
 }
-

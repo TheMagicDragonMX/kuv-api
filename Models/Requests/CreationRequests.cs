@@ -1,21 +1,47 @@
+using System.Text.Json.Nodes;
+
 namespace kuv_api.Models.Requests;
 
 /// <summary>
-/// A creation returned to the client.
+/// What describes a creation, without its program. This is what lists of creations return.
 /// </summary>
-public sealed record CreationResponse(
+public record CreationResponse(
 	int Id,
 	int UserId,
 	string Title,
 	string? Description,
-	string ProgramJson,
-	string? EnvironmentJson,
 	double DurationSeconds,
 	bool HasVideo,
 	bool IsPublic,
 	DateTime CreatedAt,
 	DateTime UpdatedAt
 );
+
+/// <summary>
+/// A creation with its program file, as returned when one creation is asked for, created or updated.
+/// </summary>
+public sealed record CreationDetailResponse : CreationResponse
+{
+	/// <summary>
+	/// Builds the answer from the description of the creation and its program file.
+	/// </summary>
+	/// <param name="creation">
+	/// What describes the creation.
+	/// </param>
+	/// <param name="programFile">
+	/// The content of its <c>program.json</c>.
+	/// </param>
+	public CreationDetailResponse(CreationResponse creation, JsonNode programFile) : base(creation)
+	{
+		ProgramFile = programFile;
+	}
+
+	/// <summary>
+	/// The program file: its <c>version</c>, the <c>program</c> and the <c>environment</c>, as defined by
+	/// <c>Schemas/program-file.schema.json</c>.
+	/// </summary>
+	public JsonNode ProgramFile { get; init; }
+}
 
 /// <summary>
 /// Request to change visibility of a creation.
@@ -38,14 +64,9 @@ public sealed class CreateCreationRequest
 	public string? Description { get; set; }
 
 	/// <summary>
-	/// Cube program JSON.
+	/// The program file, as JSON text that follows <c>Schemas/program-file.schema.json</c>.
 	/// </summary>
-	public required string ProgramJson { get; set; }
-
-	/// <summary>
-	/// Optional cube environment JSON.
-	/// </summary>
-	public string? EnvironmentJson { get; set; }
+	public required string ProgramFile { get; set; }
 
 	/// <summary>
 	/// Animation duration in seconds.
@@ -69,9 +90,9 @@ public sealed class CreateCreationRequest
 public sealed class UpdateCreationRequest
 {
 	/// <summary>
-	/// Title of the creation.
+	/// Title of the creation. Left as it was when empty.
 	/// </summary>
-	public required string Title { get; set; }
+	public string? Title { get; set; }
 
 	/// <summary>
 	/// Optional description.
@@ -79,17 +100,13 @@ public sealed class UpdateCreationRequest
 	public string? Description { get; set; }
 
 	/// <summary>
-	/// Cube program JSON.
+	/// The new program file, as JSON text that follows <c>Schemas/program-file.schema.json</c>. Left as it was when
+	/// missing.
 	/// </summary>
-	public required string ProgramJson { get; set; }
+	public string? ProgramFile { get; set; }
 
 	/// <summary>
-	/// Optional cube environment JSON.
-	/// </summary>
-	public string? EnvironmentJson { get; set; }
-
-	/// <summary>
-	/// Animation duration in seconds.
+	/// Animation duration in seconds. Left as it was when zero.
 	/// </summary>
 	public double DurationSeconds { get; set; }
 

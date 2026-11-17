@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kuv.local/schemas/program-file.schema.json",
+  "title": "Kü-V program file",
+  "description": "The complete program of a creation, stored as program.json in the folder of the creation: the program the cube runs and the environment (stage) it runs on. This schema fixes the structure; the fields of each block are checked by the engine (kuv-client src/app/cube/engine/blocks).",
+  "type": "object",
+  "required": ["version", "program"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Version of the program file format.",
+      "const": 1
+    },
+    "program": { "$ref": "#/$defs/program" },
+    "environment": { "$ref": "#/$defs/environment" }
+  },
+  "$defs": {
+    "color": {
+      "description": "A color written as #RRGGBB.",
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "faceName": {
+      "description": "Name of a face of the cube.",
+      "enum": ["FRONT", "RIGHT", "BACK", "LEFT", "TOP"]
+    },
+    "sideName": {
+      "description": "Name of a side face (every face but the top).",
+      "enum": ["FRONT", "RIGHT", "BACK", "LEFT"]
+    },
+    "image": {
+      "description": "The picture of a face: 64 * 64 colors, row after row.",
+      "type": "array",
+      "minItems": 4096,
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/color" }
+    },
+    "faceImages": {
+      "description": "The picture of each face that has one. A face that is not here has none.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(FRONT|RIGHT|BACK|LEFT|TOP)$": { "$ref": "#/$defs/image" }
+      }
+    },
+    "block": {
+      "description": "One block. Its op names the kind of block; the other fields depend on it and are checked by the engine.",
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": { "type": "string", "minLength": 1 }
+      }
+    },
+    "createBlock": {
+      "description": "A create block, which is what the objects a program starts with are.",
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": { "const": "create" }
+      }
+    },
+    "trigger": {
+      "description": "The event that starts a script: start runs once when the program starts; every runs again every given number of seconds.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["start", "every"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "start" } } },
+          "then": {
+            "additionalProperties": false,
+            "properties": { "type": {} }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "every" } } },
+          "then": {
+            "required": ["seconds"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "seconds": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        }
+      ]
+    },
+    "script": {
+      "description": "A stack of blocks and the event that starts it.",
+      "type": "object",
+      "required": ["trigger", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/block" }
+        }
+      }
+    },
+    "program": {
+      "description": "What the cube runs.",
+      "type": "object",
+      "required": ["version", "scripts"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "description": "Version of the program format.",
+          "const": 1
+        },
+        "config": {
+          "description": "Engine settings.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "topAnchor": { "$ref": "#/$defs/sideName" },
+            "floor": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "objects": {
+          "description": "Objects that exist when the program starts, as create blocks.",
+          "type": "array",
+          "items": {
+            "allOf": [
+              { "$ref": "#/$defs/block" },
+              { "$ref": "#/$defs/createBlock" }
+            ]
+          }
+        },
+        "scripts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/script" }
+        }
+      }
+    },
+    "namedBackground": {
+      "description": "A background the program can switch to.",
+      "type": "object",
+      "required": ["name", "images"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "images": { "$ref": "#/$defs/faceImages" }
+      }
+    },
+    "intensity": {
+      "description": "How intensely something shines: 1 is its own color, 0 is off.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "environment": {
+      "description": "The stage the program runs on.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "description": "Pictures behind the objects, by face.",
+          "$ref": "#/$defs/faceImages"
+        },
+        "backgrounds": {
+          "description": "The backgrounds a program can switch to, in order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/namedBackground" }
+        },
+        "startBackground": {
+          "description": "Name of the background of backgrounds the cube starts with.",
+          "type": "string"
+        },
+        "brightness": {
+          "description": "How intensely the background and the objects shine.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "background": { "$ref": "#/$defs/intensity" },
+            "behindObjects": { "$ref": "#/$defs/intensity" },
+            "objects": { "$ref": "#/$defs/intensity" }
+          }
+        }
+      }
+    }
+  }
+}
