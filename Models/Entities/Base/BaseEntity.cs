@@ -1,9 +1,9 @@
 namespace kuv_api.Models.Entities.Base;
 
 /// <summary>
-/// Base class for the database entities that have an id key, with their creation and update times.
+/// Base class for the database entities that have an id key.
 /// </summary>
-public abstract class BaseEntity : UpdatableEntity
+public abstract class BaseEntity
 {
     /// <summary>
     /// Primary key of the entity.

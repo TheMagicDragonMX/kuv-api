@@ -42,14 +42,6 @@ namespace kuv_api.Migrations
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LegacyEnvironmentJson")
-                        .HasColumnType("text")
-                        .HasColumnName("EnvironmentJson");
-
-                    b.Property<string>("LegacyProgramJson")
-                        .HasColumnType("text")
-                        .HasColumnName("ProgramJson");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");

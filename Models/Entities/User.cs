@@ -5,7 +5,7 @@ namespace kuv_api.Models.Entities;
 /// <summary>
 /// An account that can authenticate against the API.
 /// </summary>
-public class User : BaseEntity
+public class User : BaseEntity, ICreatedAt, IUpdatedAt
 {
 	/// <summary>
 	/// Unique username used to log in.
@@ -43,4 +43,14 @@ public class User : BaseEntity
 	/// The profile picture is not stored here: it is a file in <c>uploads/pfp</c> (see <c>ProfilePhotoService</c>).
 	/// </summary>
 	public string? Bio { get; set; }
+
+	/// <summary>
+	/// When the user was created.
+	/// </summary>
+	public DateTime CreatedAt { get; set; }
+
+	/// <summary>
+	/// When the user was last updated.
+	/// </summary>
+	public DateTime UpdatedAt { get; set; }
 }

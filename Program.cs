@@ -109,7 +109,6 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddSingleton<CreationStorage>();
 builder.Services.AddSingleton<ProgramFileValidator>();
 builder.Services.AddScoped<CreationService>();
-builder.Services.AddScoped<LegacyCreationImporter>();
 builder.Services.AddSingleton<ICubeDirectory, ConfigCubeDirectory>();
 builder.Services.AddSingleton<CubeHub>();
 builder.Services.AddOpenApi();
@@ -153,22 +152,5 @@ app.UseAuthorization();
 /// Controllers
 /// 
 app.MapControllers();
-
-///
-/// Creations stored the old way (program in the database, video loose in uploads/creations) move to their own folders
-///
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        await scope.ServiceProvider.GetRequiredService<LegacyCreationImporter>().Run();
-    }
-
-    catch (Exception exception)
-    {
-        // The API works without it: the creations not moved yet only miss their program until the next start
-        app.Logger.LogError(exception, "The creations stored the old way could not be moved to their folders.");
-    }
-}
 
 app.Run();

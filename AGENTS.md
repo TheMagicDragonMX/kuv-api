@@ -29,8 +29,7 @@ Follow these rules whenever you write or modify code in this project.
 
 ## 3b. Entity base classes
 
-- They live in `Models/Entities/Base/` (namespace `kuv_api.Models.Entities.Base`), apart from the real entities.
-- `TimestampedEntity` gives `CreatedAt`; `UpdatableEntity` adds `UpdatedAt`; `BaseEntity` adds the `Id` key. Entities with an `Id` extend `BaseEntity`; an entity with a composite key (`Follow`) extends `TimestampedEntity`.
+- They live in `Models/Entities/Base/` (namespace `kuv_api.Models.Entities.Base`), apart from the real entities, and each lives on its own: `BaseEntity` gives the `Id` key; `ICreatedAt` and `IUpdatedAt` are interfaces for `CreatedAt` and `UpdatedAt`. C# allows only one base class, so an entity extends `BaseEntity` (if it has an `Id`) and implements the interfaces it needs, declaring those properties itself (`User` and `Creation` have both; `Follow`, which has a composite key and no `Id`, only `ICreatedAt`).
 - `KuvDbContext.SaveChanges` stamps the times: `CreatedAt` on insert, `UpdatedAt` on insert and update. Never set them by hand.
 
 ## 3c. Creations

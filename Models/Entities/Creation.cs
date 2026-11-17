@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
 using kuv_api.Models.Entities.Base;
 
 namespace kuv_api.Models.Entities;
@@ -7,7 +6,7 @@ namespace kuv_api.Models.Entities;
 /// A user-created animation or project for the cube. The database only describes it (who made it, its title, when it
 /// changed...); its program is the <c>program.json</c> file in its own folder, <c>uploads/creations/{id}</c>, next to its video.
 /// </summary>
-public class Creation : BaseEntity
+public class Creation : BaseEntity, ICreatedAt, IUpdatedAt
 {
 	/// <summary>
 	/// The user who owns this creation.
@@ -50,17 +49,12 @@ public class Creation : BaseEntity
 	public bool IsPublic { get; set; } = false;
 
 	/// <summary>
-	/// The program of the creation as it was stored before it moved to <c>program.json</c>. Only the startup import
-	/// reads it; it is null for every creation that has been imported or created since.
+	/// When the creation was created.
 	/// </summary>
-	[Column("ProgramJson")]
-	public string? LegacyProgramJson { get; set; }
+	public DateTime CreatedAt { get; set; }
 
 	/// <summary>
-	/// The environment of the creation as it was stored before it moved to <c>program.json</c>. Only the startup
-	/// import reads it; it is null for every creation that has been imported or created since.
+	/// When the creation was last updated.
 	/// </summary>
-	[Column("EnvironmentJson")]
-	public string? LegacyEnvironmentJson { get; set; }
+	public DateTime UpdatedAt { get; set; }
 }
-

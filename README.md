@@ -132,7 +132,7 @@ uploads/creations/7/
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
 - `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `durationSeconds`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
-- Creations saved before this change had the program in the database and the video loose in `uploads/creations`. `Services/LegacyCreationImporter.cs` moves each one to its folder when the API starts (it does nothing once they are all moved) and empties the old `Creations.ProgramJson` / `EnvironmentJson` columns. The migration `CreationFolders` only makes `ProgramJson` nullable; **once every database has run the API with the importer, a later migration drops both columns and `Creation.LegacyProgramJson` / `LegacyEnvironmentJson`.** Do not drop them in the same deploy as the importer.
+- The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `uploads/creations/*.webm`, if any are left on a server, can be deleted by hand.
 
 ## EF Core commands
 

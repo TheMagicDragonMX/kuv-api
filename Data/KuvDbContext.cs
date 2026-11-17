@@ -57,16 +57,16 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	{
 		var now = DateTime.UtcNow;
 
-		foreach (var entry in ChangeTracker.Entries<TimestampedEntity>())
+		foreach (var entry in ChangeTracker.Entries())
 		{
-			if (entry.State == EntityState.Added)
+			if (entry.State == EntityState.Added && entry.Entity is ICreatedAt created)
 			{
-				entry.Entity.CreatedAt = now;
+				created.CreatedAt = now;
 			}
 
-			if (entry.Entity is UpdatableEntity updatable && entry.State is EntityState.Added or EntityState.Modified)
+			if (entry.State is EntityState.Added or EntityState.Modified && entry.Entity is IUpdatedAt updated)
 			{
-				updatable.UpdatedAt = now;
+				updated.UpdatedAt = now;
 			}
 		}
 	}
