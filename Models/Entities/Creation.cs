@@ -1,3 +1,5 @@
+using kuv_api.Models.Entities.Base;
+
 namespace kuv_api.Models.Entities;
 
 /// <summary>
@@ -54,15 +56,5 @@ public class Creation : BaseEntity
 	/// Whether this creation is public or private. Defaults to false (private).
 	/// </summary>
 	public bool IsPublic { get; set; } = false;
-
-	/// <summary>
-	/// When the creation was created.
-	/// </summary>
-	public required DateTime CreatedAt { get; set; }
-
-	/// <summary>
-	/// When the creation was last updated.
-	/// </summary>
-	public required DateTime UpdatedAt { get; set; }
 }
 

@@ -1,3 +1,5 @@
+using kuv_api.Models.Entities.Base;
+
 namespace kuv_api.Models.Entities;
 
 /// <summary>

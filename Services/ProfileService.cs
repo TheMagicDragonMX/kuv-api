@@ -289,7 +289,7 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
 
         if (!alreadyFollows)
         {
-            dbContext.Follows.Add(new Follow { FollowerId = viewerId, FollowedId = userId, CreatedAt = DateTime.UtcNow });
+            dbContext.Follows.Add(new Follow { FollowerId = viewerId, FollowedId = userId });
             await dbContext.SaveChangesAsync();
         }
 

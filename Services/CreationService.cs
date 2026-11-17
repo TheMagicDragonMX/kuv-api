@@ -102,7 +102,6 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			throw new BadRequestException("ProgramJson is required.");
 		}
 
-		var now = DateTime.UtcNow;
 		var creation = new Creation
 		{
 			UserId = userId,
@@ -112,8 +111,6 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			EnvironmentJson = request.EnvironmentJson,
 			DurationSeconds = request.DurationSeconds,
 			IsPublic = request.IsPublic,
-			CreatedAt = now,
-			UpdatedAt = now,
 		};
 
 		db.Creations.Add(creation);
@@ -176,7 +173,6 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 			creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
 		}
 
-		creation.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 
 		return ToResponse(creation);
@@ -196,7 +192,6 @@ public sealed class CreationService(KuvDbContext db, IWebHostEnvironment environ
 		}
 
 		creation.IsPublic = isPublic;
-		creation.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 
 		return ToResponse(creation);

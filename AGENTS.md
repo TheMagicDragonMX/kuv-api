@@ -27,6 +27,12 @@ Follow these rules whenever you write or modify code in this project.
 - Navigation properties to a required relationship (non-nullable foreign key) are non-nullable and initialized with `= null!` (e.g. `public User Follower { get; set; } = null!;`). They are not `required`, and use sites never need `!`. Only navigations to optional relationships (nullable foreign key) are typed `?`.
 - Declare a navigation property right after its foreign key property (e.g. `Follower` right after `FollowerId`), not grouped at the end of the class.
 
+## 3b. Entity base classes
+
+- They live in `Models/Entities/Base/` (namespace `kuv_api.Models.Entities.Base`), apart from the real entities.
+- `TimestampedEntity` gives `CreatedAt`; `UpdatableEntity` adds `UpdatedAt`; `BaseEntity` adds the `Id` key. Entities with an `Id` extend `BaseEntity`; an entity with a composite key (`Follow`) extends `TimestampedEntity`.
+- `KuvDbContext.SaveChanges` stamps the times: `CreatedAt` on insert, `UpdatedAt` on insert and update. Never set them by hand.
+
 ## 4. Document what you create
 
 - Always write XML doc tags on multiple lines (opening tag, content, closing tag each on its own `///` line), even when the content is short. Never use the one-line form `/// <summary>Text</summary>`.
@@ -43,7 +49,7 @@ Follow these rules whenever you write or modify code in this project.
 
 - In every class we create (entities, models, DTOs), a property gets the `required` keyword unless its value can legitimately be `null`.
 - Do not initialize non-nullable properties with placeholders such as `= string.Empty` just to silence nullable warnings; use `required` instead.
-- Properties that are not set by callers (e.g. the database-generated `Id`) and nullable properties (`string?`) are not `required`.
+- Properties that are not set by callers (e.g. the database-generated `Id`, or `CreatedAt` / `UpdatedAt`, which `KuvDbContext` stamps on save) and nullable properties (`string?`) are not `required`.
 
 ## 7. Blank lines between declarations
 

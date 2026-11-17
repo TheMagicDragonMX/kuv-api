@@ -46,6 +46,8 @@ Accounts created with Google have no password (`Users.Hashword` is null) and can
 
 Configuration: set `Google:ClientId` (environment variable `Google__ClientId`) to the OAuth client ID of the Google Cloud project; for local development put `Google__ClientId=...` in `.env`. Deployment fills it from the `GOOGLE_CLIENT_ID` repository variable (`Deploy/kuv-api.env`). Without it, `/session/google` answers `500` and password login keeps working. The same client ID goes in the web app's `environments/*.ts`. No client secret is needed: the API only verifies tokens, it never talks to Google on the user's behalf.
 
+The migration `AddTimestamps` adds `Users.CreatedAt` and `Users.UpdatedAt` (existing users get the migration time); apply it with `dotnet ef database update`.
+
 The migration `AddGoogleSignIn` adds `Users.GoogleId` (unique) and makes `Users.Hashword` nullable; apply it with `dotnet ef database update`.
 
 ## CORS

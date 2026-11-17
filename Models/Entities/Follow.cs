@@ -1,9 +1,11 @@
+using kuv_api.Models.Entities.Base;
+
 namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// One user following another. The pair is the key, so a user follows another at most once.
 /// </summary>
-public class Follow
+public class Follow : TimestampedEntity
 {
 	/// <summary>
 	/// The user who follows.
@@ -24,9 +26,4 @@ public class Follow
 	/// The user who is followed. Loaded only when a query includes it.
 	/// </summary>
 	public User Followed { get; set; } = null!;
-
-	/// <summary>
-	/// When the user started following.
-	/// </summary>
-	public required DateTime CreatedAt { get; set; }
 }
