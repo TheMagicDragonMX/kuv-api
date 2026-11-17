@@ -24,6 +24,8 @@ Follow these rules whenever you write or modify code in this project.
 - `<Nullable>enable</Nullable>` is set in `kuv-api.csproj`.
 - Do **not** add `#nullable enable` to individual files.
 - Do not silence nullable warnings with `!` unless the value is guaranteed by construction.
+- Navigation properties to a required relationship (non-nullable foreign key) are non-nullable and initialized with `= null!` (e.g. `public User Follower { get; set; } = null!;`). They are not `required`, and use sites never need `!`. Only navigations to optional relationships (nullable foreign key) are typed `?`.
+- Declare a navigation property right after its foreign key property (e.g. `Follower` right after `FollowerId`), not grouped at the end of the class.
 
 ## 4. Document what you create
 

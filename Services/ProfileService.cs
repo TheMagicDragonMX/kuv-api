@@ -192,7 +192,7 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
         var followers = dbContext.Follows
             .Where(follow => follow.FollowedId == userId)
             .OrderByDescending(follow => follow.CreatedAt)
-            .Select(follow => follow.Follower!);
+            .Select(follow => follow.Follower);
 
         return await Summaries(viewerId, followers);
     }
@@ -219,7 +219,7 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
         var following = dbContext.Follows
             .Where(follow => follow.FollowerId == userId)
             .OrderByDescending(follow => follow.CreatedAt)
-            .Select(follow => follow.Followed!);
+            .Select(follow => follow.Followed);
 
         return await Summaries(viewerId, following);
     }

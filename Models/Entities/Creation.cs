@@ -11,6 +11,11 @@ public class Creation : BaseEntity
 	public required int UserId { get; set; }
 
 	/// <summary>
+	/// Navigation property to the owner user.
+	/// </summary>
+	public User User { get; set; } = null!;
+
+	/// <summary>
 	/// Title of the creation.
 	/// </summary>
 	public required string Title { get; set; }
@@ -59,10 +64,5 @@ public class Creation : BaseEntity
 	/// When the creation was last updated.
 	/// </summary>
 	public required DateTime UpdatedAt { get; set; }
-
-	/// <summary>
-	/// Navigation property to the owner user.
-	/// </summary>
-	public User? User { get; set; }
 }
 

@@ -11,22 +11,22 @@ public class Follow
 	public required int FollowerId { get; set; }
 
 	/// <summary>
+	/// The user who follows. Loaded only when a query includes it.
+	/// </summary>
+	public User Follower { get; set; } = null!;
+
+	/// <summary>
 	/// The user who is followed.
 	/// </summary>
 	public required int FollowedId { get; set; }
 
 	/// <summary>
+	/// The user who is followed. Loaded only when a query includes it.
+	/// </summary>
+	public User Followed { get; set; } = null!;
+
+	/// <summary>
 	/// When the user started following.
 	/// </summary>
 	public required DateTime CreatedAt { get; set; }
-
-	/// <summary>
-	/// The user who follows. Loaded only when a query includes it.
-	/// </summary>
-	public User? Follower { get; set; }
-
-	/// <summary>
-	/// The user who is followed. Loaded only when a query includes it.
-	/// </summary>
-	public User? Followed { get; set; }
 }
