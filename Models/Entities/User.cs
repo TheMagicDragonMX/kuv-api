@@ -40,7 +40,7 @@ public class User : BaseEntity, ICreatedAt, IUpdatedAt
 
 	/// <summary>
 	/// What the user tells about themselves on their profile. Null until they write it.
-	/// The profile picture is not stored here: it is a file in <c>uploads/pfp</c> (see <c>ProfilePhotoService</c>).
+	/// The profile picture is not stored here: it is a file in <c>pfp</c> of the file store (see <c>ProfilePhotoService</c>).
 	/// </summary>
 	public string? Bio { get; set; }
 

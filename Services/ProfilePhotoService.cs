@@ -3,11 +3,11 @@ using kuv_api.Models.Exceptions;
 namespace kuv_api.Services;
 
 /// <summary>
-/// Keeps the profile pictures. Each one is a file in <c>uploads/pfp</c> named after the user's id and the type of
+/// Keeps the profile pictures. Each one is a file in the <see cref="IFileStore"/>, in <c>pfp</c>, named after the user's id and the type of
 /// the image (<c>7.png</c>, <c>7.jpg</c>, <c>7.webp</c> or <c>7.gif</c>); a user has at most one. Nothing about the
 /// pictures is in the database: a user has a picture when its file exists.
 /// </summary>
-public sealed class ProfilePhotoService(IWebHostEnvironment environment)
+public sealed class ProfilePhotoService(IFileStore files)
 {
     /// <summary>
     /// Biggest picture accepted, in bytes.
@@ -29,8 +29,6 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
     /// What every error about a picture says.
     /// </summary>
     private const string InvalidPhotoMessage = "La foto debe ser una imagen PNG, JPEG, WebP o GIF de hasta 300 KB.";
-
-    private readonly string storageDirectory = Path.Combine(environment.ContentRootPath, "uploads", "pfp");
 
     /// <summary>
     /// Saves a picture as the profile picture of a user, replacing the one they had.
@@ -61,16 +59,10 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
 
         var extension = DetectExtension(bytes);
 
-        Directory.CreateDirectory(storageDirectory);
+        using var content = new MemoryStream(bytes);
+        await files.Write(KeyFor(userId, extension), content);
 
-        // Written aside and then moved, so a picture being replaced is never seen half written
-        var path = PathFor(userId, extension);
-        var temporaryPath = $"{path}.tmp";
-
-        await File.WriteAllBytesAsync(temporaryPath, bytes);
-        File.Move(temporaryPath, path, overwrite: true);
-
-        DeleteExcept(userId, extension);
+        await DeleteExcept(userId, extension);
     }
 
     /// <summary>
@@ -79,9 +71,9 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
     /// <param name="userId">
     /// The user whose picture is removed.
     /// </param>
-    public void Delete(int userId)
+    public Task Delete(int userId)
     {
-        DeleteExcept(userId, keepExtension: string.Empty);
+        return DeleteExcept(userId, keepExtension: string.Empty);
     }
 
     /// <summary>
@@ -96,9 +88,19 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
     /// <exception cref="NotFoundException">
     /// The user has no picture.
     /// </exception>
-    public StoredPhoto Find(int userId)
+    public async Task<StoredPhoto> Find(int userId)
     {
-        return Lookup(userId) ?? throw new NotFoundException("Este usuario no tiene foto.");
+        foreach (var (extension, contentType) in Types)
+        {
+            var file = await files.Open(KeyFor(userId, extension));
+
+            if (file is not null)
+            {
+                return new StoredPhoto(file.Content, contentType, file.LastModified);
+            }
+        }
+
+        throw new NotFoundException("Este usuario no tiene foto.");
     }
 
     /// <summary>
@@ -112,25 +114,15 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
     /// <returns>
     /// A path on this API such as <c>/users/7/photo?v=639000000000000000</c>, or null.
     /// </returns>
-    public string? UrlFor(int userId)
+    public async Task<string?> UrlFor(int userId)
     {
-        var photo = Lookup(userId);
-
-        return photo is null ? null : $"/users/{userId}/photo?v={photo.LastModified.Ticks}";
-    }
-
-    /// <summary>
-    /// Looks for the file of a user's picture, whatever its type.
-    /// </summary>
-    private StoredPhoto? Lookup(int userId)
-    {
-        foreach (var (extension, contentType) in Types)
+        foreach (var (extension, _) in Types)
         {
-            var path = PathFor(userId, extension);
+            var savedAt = await files.LastModified(KeyFor(userId, extension));
 
-            if (File.Exists(path))
+            if (savedAt is not null)
             {
-                return new StoredPhoto(path, contentType, File.GetLastWriteTimeUtc(path));
+                return $"/users/{userId}/photo?v={savedAt.Value.UtcTicks}";
             }
         }
 
@@ -140,23 +132,23 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
     /// <summary>
     /// Deletes the files of a user's picture of every type but one.
     /// </summary>
-    private void DeleteExcept(int userId, string keepExtension)
+    private async Task DeleteExcept(int userId, string keepExtension)
     {
         foreach (var (extension, _) in Types)
         {
             if (extension != keepExtension)
             {
-                File.Delete(PathFor(userId, extension));
+                await files.Delete(KeyFor(userId, extension));
             }
         }
     }
 
     /// <summary>
-    /// The path of the file of a user's picture of a type.
+    /// The key, in the file store, of the file of a user's picture of a type.
     /// </summary>
-    private string PathFor(int userId, string extension)
+    private static string KeyFor(int userId, string extension)
     {
-        return Path.Combine(storageDirectory, $"{userId}.{extension}");
+        return $"pfp/{userId}.{extension}";
     }
 
     /// <summary>
@@ -198,15 +190,15 @@ public sealed class ProfilePhotoService(IWebHostEnvironment environment)
 }
 
 /// <summary>
-/// The file of a profile picture.
+/// The file of a profile picture. Whoever receives it must dispose its stream.
 /// </summary>
-/// <param name="FilePath">
-/// Where the file is on disk.
+/// <param name="Content">
+/// The bytes of the image.
 /// </param>
 /// <param name="ContentType">
 /// The content type to serve it with.
 /// </param>
 /// <param name="LastModified">
-/// The moment (UTC) the picture was saved.
+/// The moment the picture was saved.
 /// </param>
-public sealed record StoredPhoto(string FilePath, string ContentType, DateTime LastModified);
+public sealed record StoredPhoto(Stream Content, string ContentType, DateTimeOffset LastModified);

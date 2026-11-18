@@ -3,6 +3,7 @@ using kuv_api.Data;
 using kuv_api.Models.Exceptions;
 using kuv_api.Models.Entities;
 using kuv_api.Services;
+using System.Net.Http.Headers;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -104,6 +105,40 @@ builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<GoogleAuthService>();
+// Where the files are kept. Remote (the default) is the file server of the VPS, so every API, wherever it runs, sees
+// the same files; Disk keeps them in a folder of this machine (the server itself, or a laptop with no connection).
+var filesMode = builder.Configuration["Files:Mode"] ?? "Remote";
+
+if ("Disk" == filesMode)
+{
+    var filesRoot = builder.Configuration["Files:Root"] ?? Path.Combine(builder.Environment.ContentRootPath, "uploads");
+
+    builder.Services.AddSingleton<IFileStore>(new DiskFileStore(filesRoot));
+}
+
+else if ("Remote" == filesMode)
+{
+    var remoteUrl = builder.Configuration["Files:RemoteUrl"]
+        ?? throw new InvalidOperationException("Files:RemoteUrl is not set.");
+    var remoteKey = builder.Configuration["Files:RemoteKey"]
+        ?? throw new InvalidOperationException("Files:RemoteKey is not set. Set it, or set Files:Mode to Disk to keep the files on this machine.");
+    var login = Convert.ToBase64String(Encoding.UTF8.GetBytes($"kuv:{remoteKey}"));
+
+    builder.Services.AddHttpClient<IFileStore, RemoteFileStore>(client =>
+    {
+        client.BaseAddress = new Uri(remoteUrl.TrimEnd('/') + "/");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", login);
+
+        // Videos are big: only the wait for an answer is limited, not the whole transfer
+        client.Timeout = TimeSpan.FromMinutes(10);
+    });
+}
+
+else
+{
+    throw new InvalidOperationException($"Files:Mode must be Remote or Disk, not '{filesMode}'.");
+}
+
 builder.Services.AddSingleton<ProfilePhotoService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddSingleton<CreationStorage>();

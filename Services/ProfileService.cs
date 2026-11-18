@@ -68,7 +68,7 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
             ?? throw new NotFoundException("Ese usuario no existe.");
 
         // The picture is a file, so it cannot be part of the query
-        return profile with { Photo = photos.UrlFor(profile.Id) };
+        return profile with { Photo = await photos.UrlFor(profile.Id) };
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
     public async Task<ProfileResponse> RemovePhoto(int viewerId)
     {
         await EnsureExists(viewerId);
-        photos.Delete(viewerId);
+        await photos.Delete(viewerId);
 
         return await GetProfile(viewerId, viewerId);
     }
@@ -165,9 +165,9 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
     /// <exception cref="NotFoundException">
     /// The user has no picture.
     /// </exception>
-    public StoredPhoto GetPhoto(int userId)
+    public async Task<StoredPhoto> GetPhoto(int userId)
     {
-        return photos.Find(userId);
+        return await photos.Find(userId);
     }
 
     /// <summary>
@@ -362,7 +362,9 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
             .ToListAsync();
 
         // The pictures are files, so they cannot be part of the query
-        return summaries.Select(summary => summary with { Photo = photos.UrlFor(summary.Id) }).ToList();
+        var urls = await Task.WhenAll(summaries.Select(summary => photos.UrlFor(summary.Id)));
+
+        return summaries.Select((summary, index) => summary with { Photo = urls[index] }).ToList();
     }
 }
 

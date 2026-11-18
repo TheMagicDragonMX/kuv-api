@@ -96,19 +96,39 @@ Every endpoint needs `Authorization: Bearer <access token>`, except `GET /users/
 
 ### Profile pictures
 
-Pictures are not in the database. Each is a file in `uploads/pfp`, named after the user's id and the type of the image (`7.png`, `7.jpg`, `7.webp` or `7.gif`); a user has at most one, and a user has a picture when its file exists (`Services/ProfilePhotoService.cs`).
+Pictures are not in the database. Each is a file in the file store, in `pfp/`, named after the user's id and the type of the image (`7.png`, `7.jpg`, `7.webp` or `7.gif`); a user has at most one, and a user has a picture when its file exists (`Services/ProfilePhotoService.cs`).
 
 - The type is read from the first bytes of the file, never from its name or the `Content-Type` the client sends, so a file that is not really an image is refused (`400`) and the served `Content-Type` is always right. Pictures are served with `X-Content-Type-Options: nosniff`.
 - `GET /users/{id}/photo` answers `Cache-Control: public, max-age=31536000, immutable` when the address has `?v=` (the ones the profiles give) and supports `If-Modified-Since`.
 - The pictures are public to anyone who knows a user id, which is no more than any registered account can already see (registration is open).
-- `uploads/` is created by the API next to its binaries and is **data, not part of the deploy**: the deploy workflow excludes it from `rsync --delete`. Back it up with the database.
+- See [File storage](#file-storage) for where `pfp/` and `creations/` physically live. Back that folder up with the database.
+
+## File storage
+
+Programs, videos and profile pictures are files, not database rows, and they go through one `IFileStore` (`Services/Files/`). Since the database is shared by every API that connects to it, the files must be too, so there are two stores:
+
+- **`Remote`** (default): the files live on the VPS. The API reads and writes them over HTTP at `Files:RemoteUrl` (`https://api.kuv.lol/files/`), which is a WebDAV folder shared by nginx, so an API on a laptop sees the same files as the one on the server. It needs `Files:RemoteKey`.
+- **`Disk`**: the files live in a folder of this machine, `Files:Root` (default `uploads/` next to the binaries). The server uses it, and a laptop can use it to work with no connection.
+
+| Setting | Meaning |
+| --- | --- |
+| `Files__Mode` | `Remote` (default) or `Disk` |
+| `Files__RemoteUrl` | Address of the shared folder, default `https://api.kuv.lol/files/` |
+| `Files__RemoteKey` | Password of the shared folder. Put it in your local `.env` (git-ignored), never in a committed file |
+| `Files__Root` | Folder used in `Disk` mode |
+
+- **Working offline:** set `Files__Mode=Disk` in `.env` and restart. Files saved in that mode stay on your machine; the server will not find them, and they are not uploaded when you go back to `Remote`.
+- **On the server** the API runs with `Files__Mode=Disk` and `Files__Root=/var/www/kuv-files` (in `kuv-api.env`), and nginx serves that same folder at `/files/` with HTTP basic auth (user `kuv`, password = the key). If `Files__Mode` were missing there, the API would try to call itself, so it refuses to start without `Files__RemoteKey`.
+- **nginx** (`/etc/nginx/conf.d/kuv-client.conf`, `api.kuv.lol` block): `location /files/` with `dav_methods PUT DELETE`, `create_full_put_path on`, `auth_basic` against `/etc/nginx/kuv-files.htpasswd`, `client_max_body_size 110m`. The folder `/var/www/kuv-files` is owned by `root:kuv-files` with the setgid bit; `nginx` is in that group and the API service runs with `UMask=0002` (`/etc/systemd/system/kuv-api.service.d/files.conf`), so both can replace and delete each other's files. SELinux label: `httpd_sys_rw_content_t`.
+- To rotate the key: `openssl rand -hex 32`, write `kuv:$(openssl passwd -apr1 KEY)` to `/etc/nginx/kuv-files.htpasswd`, reload nginx, and update every `.env`.
+- The folder is **data, not part of the deploy** (it is outside `/var/www/kuv-api`). Back it up with the database.
 
 ## Creations
 
-A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, duration of the recording, the name of its video, and when it was created and updated. **Its folder holds the program**: `uploads/creations/{id}/` has `program.json` and the video (`video.webm` or `video.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
+A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, duration of the recording, the name of its video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the video (`video.webm` or `video.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
 
 ```
-uploads/creations/7/
+creations/7/
 ├── program.json     the complete program (see below)
 └── video.webm       the recording of the last save
 ```
@@ -132,7 +152,7 @@ uploads/creations/7/
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
 - `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `durationSeconds`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
-- The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `uploads/creations/*.webm`, if any are left on a server, can be deleted by hand.
+- The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `creations/*.webm`, if any are left on a server, can be deleted by hand.
 
 ## EF Core commands
 

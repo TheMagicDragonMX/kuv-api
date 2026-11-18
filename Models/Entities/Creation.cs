@@ -4,7 +4,7 @@ namespace kuv_api.Models.Entities;
 
 /// <summary>
 /// A user-created animation or project for the cube. The database only describes it (who made it, its title, when it
-/// changed...); its program is the <c>program.json</c> file in its own folder, <c>uploads/creations/{id}</c>, next to its video.
+/// changed...); its program is the <c>program.json</c> file in its own folder, <c>creations/{id}</c> of the file store, next to its video.
 /// </summary>
 public class Creation : BaseEntity, ICreatedAt, IUpdatedAt
 {
@@ -34,7 +34,7 @@ public class Creation : BaseEntity, ICreatedAt, IUpdatedAt
 	public double DurationSeconds { get; set; }
 
 	/// <summary>
-	/// Name of the video file inside the folder of the creation (<c>uploads/creations/{id}</c>), or null when it has no video.
+	/// Name of the video file inside the folder of the creation (<c>creations/{id}</c> of the file store), or null when it has no video.
 	/// </summary>
 	public string? VideoFileName { get; set; }
 

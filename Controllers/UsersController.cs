@@ -103,18 +103,15 @@ public class UsersController(ProfileService profileService) : ControllerBase
     /// </exception>
     [AllowAnonymous]
     [HttpGet("{id:int}/photo")]
-    public IActionResult Photo(int id, [FromQuery] long? v)
+    public async Task<IActionResult> Photo(int id, [FromQuery] long? v)
     {
-        var photo = profileService.GetPhoto(id);
+        var photo = await profileService.GetPhoto(id);
 
         // The type is decided by the server from the content, so the browser must not guess another
         Response.Headers.XContentTypeOptions = "nosniff";
         Response.Headers.CacheControl = v is null ? "no-cache" : "public, max-age=31536000, immutable";
 
-        return new PhysicalFileResult(photo.FilePath, photo.ContentType)
-        {
-            LastModified = new DateTimeOffset(photo.LastModified)
-        };
+        return File(photo.Content, photo.ContentType, photo.LastModified, entityTag: null);
     }
 
     /// <summary>

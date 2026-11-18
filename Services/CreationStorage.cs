@@ -1,13 +1,15 @@
+using System.Text;
 using System.Text.Json.Nodes;
+using kuv_api.Models.Files;
 
 namespace kuv_api.Services;
 
 /// <summary>
-/// Keeps the files of the creations. Each creation has its own folder, <c>uploads/creations/{id}</c>, holding its
+/// Keeps the files of the creations in the <see cref="IFileStore"/>. Each creation has its own folder, <c>creations/{id}</c>, holding its
 /// program file (<c>program.json</c>) and its video (<c>video.webm</c> or <c>video.mp4</c>). The database only
 /// holds what describes the creation, never its program.
 /// </summary>
-public sealed class CreationStorage(IWebHostEnvironment environment)
+public sealed class CreationStorage(IFileStore files)
 {
     /// <summary>
     /// Name of the program file inside the folder of a creation.
@@ -26,20 +28,12 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     private static readonly string[] VideoExtensions = [".webm", ".mp4"];
 
     /// <summary>
-    /// The folder that holds the folders of all the creations.
+    /// The folder of a creation, as a key of the file store.
     /// </summary>
-    public string Root { get; } = Path.Combine(environment.ContentRootPath, "uploads", "creations");
+    private static string FolderOf(int creationId) => $"creations/{creationId}";
 
     /// <summary>
-    /// The folder of a creation. It may not exist yet.
-    /// </summary>
-    /// <param name="creationId">
-    /// The creation.
-    /// </param>
-    public string FolderOf(int creationId) => Path.Combine(Root, creationId.ToString());
-
-    /// <summary>
-    /// Writes the program file of a creation, replacing the one it had. The folder is created when needed.
+    /// Writes the program file of a creation, replacing the one it had.
     /// </summary>
     /// <param name="creationId">
     /// The creation.
@@ -49,15 +43,9 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// </param>
     public async Task WriteProgramFile(int creationId, JsonNode programFile)
     {
-        var folder = FolderOf(creationId);
-        Directory.CreateDirectory(folder);
+        using var content = new MemoryStream(Encoding.UTF8.GetBytes(programFile.ToJsonString()));
 
-        // Written aside and then moved over, so a failure never leaves a half-written program file
-        var path = Path.Combine(folder, ProgramFileName);
-        var temporary = path + ".tmp";
-
-        await File.WriteAllTextAsync(temporary, programFile.ToJsonString());
-        File.Move(temporary, path, overwrite: true);
+        await files.Write($"{FolderOf(creationId)}/{ProgramFileName}", content);
     }
 
     /// <summary>
@@ -67,18 +55,25 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// The creation.
     /// </param>
     /// <returns>
-    /// The program file, or null when the creation has none on disk.
+    /// The program file, or null when the creation has none stored.
     /// </returns>
     public async Task<JsonNode?> ReadProgramFile(int creationId)
     {
-        var path = Path.Combine(FolderOf(creationId), ProgramFileName);
+        var file = await files.Open($"{FolderOf(creationId)}/{ProgramFileName}");
 
-        if (!File.Exists(path))
+        if (file is null)
         {
             return null;
         }
 
-        return JsonNode.Parse(await File.ReadAllTextAsync(path));
+        // Copied to memory first: the parser reads without waiting, which a download must never do
+        await using var content = file.Content;
+        using var buffer = new MemoryStream();
+
+        await content.CopyToAsync(buffer);
+        buffer.Position = 0;
+
+        return JsonNode.Parse(buffer);
     }
 
     /// <summary>
@@ -95,21 +90,19 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// </returns>
     public async Task<string> WriteVideo(int creationId, IFormFile file)
     {
-        var folder = FolderOf(creationId);
-        Directory.CreateDirectory(folder);
-        DeleteVideos(creationId);
+        await DeleteVideos(creationId);
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         var fileName = VideoBaseName + (VideoExtensions.Contains(extension) ? extension : ".webm");
 
-        await using var stream = File.Create(Path.Combine(folder, fileName));
-        await file.CopyToAsync(stream);
+        await using var content = file.OpenReadStream();
+        await files.Write($"{FolderOf(creationId)}/{fileName}", content);
 
         return fileName;
     }
 
     /// <summary>
-    /// The path of the video of a creation.
+    /// Opens the video of a creation.
     /// </summary>
     /// <param name="creationId">
     /// The creation.
@@ -117,8 +110,11 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// <param name="fileName">
     /// The name of the video file stored in the database. Only its name is used, never a path in it.
     /// </param>
-    public string VideoPath(int creationId, string fileName) =>
-        Path.Combine(FolderOf(creationId), Path.GetFileName(fileName));
+    /// <returns>
+    /// The video, or null when it is not stored.
+    /// </returns>
+    public Task<StoredFile?> OpenVideo(int creationId, string fileName) =>
+        files.Open($"{FolderOf(creationId)}/{Path.GetFileName(fileName)}");
 
     /// <summary>
     /// Deletes the videos of a creation, keeping the rest of its folder.
@@ -126,18 +122,11 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// <param name="creationId">
     /// The creation.
     /// </param>
-    public void DeleteVideos(int creationId)
+    public async Task DeleteVideos(int creationId)
     {
-        var folder = FolderOf(creationId);
-
-        if (!Directory.Exists(folder))
-        {
-            return;
-        }
-
         foreach (var extension in VideoExtensions)
         {
-            File.Delete(Path.Combine(folder, VideoBaseName + extension));
+            await files.Delete($"{FolderOf(creationId)}/{VideoBaseName}{extension}");
         }
     }
 
@@ -147,13 +136,5 @@ public sealed class CreationStorage(IWebHostEnvironment environment)
     /// <param name="creationId">
     /// The creation.
     /// </param>
-    public void DeleteFolder(int creationId)
-    {
-        var folder = FolderOf(creationId);
-
-        if (Directory.Exists(folder))
-        {
-            Directory.Delete(folder, recursive: true);
-        }
-    }
+    public Task DeleteFolder(int creationId) => files.DeleteFolder(FolderOf(creationId));
 }

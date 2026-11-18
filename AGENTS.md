@@ -34,7 +34,7 @@ Follow these rules whenever you write or modify code in this project.
 
 ## 3c. Creations
 
-- The database never holds the program of a creation. It lives in `uploads/creations/{id}/program.json`, next to its video; everything about those files goes through `CreationStorage`.
+- The database never holds the program of a creation. It lives in `creations/{id}/program.json` of the file store, next to its video; everything about those files goes through `CreationStorage`. Services never touch `File`/`Directory` directly: they use `IFileStore` (disk on the server, the server's WebDAV folder on a local API), see `README.md` > File storage.
 - The format of `program.json` is `Schemas/program-file.schema.json`. Every program file is validated by `ProgramFileValidator` before it is stored. Per-block fields are validated by the client engine, not by the schema. A change to the program format changes the schema, `kuv-client` and `kuv-cube` together.
 
 ## 4. Document what you create
@@ -117,5 +117,5 @@ var token = new JwtSecurityToken(
 
 ## 11. Where type files live
 
-- Files that only define classes/records that get instantiated live in `Models/`, one subfolder per kind, and the namespace follows the folder: `Models/Entities` (database entities), `Models/Exceptions` (the `KuvException` hierarchy), `Models/Requests` (request DTOs), `Models/Messages` (socket messages), `Models/Responses` (response DTOs).
+- Files that only define classes/records that get instantiated live in `Models/`, one subfolder per kind, and the namespace follows the folder: `Models/Entities` (database entities), `Models/Exceptions` (the `KuvException` hierarchy), `Models/Requests` (request DTOs), `Models/Messages` (socket messages), `Models/Responses` (response DTOs), `Models/Files` (files read from the file store).
 - Classes with behavior (services, the exception handler, controllers, data access) stay outside `Models/`.

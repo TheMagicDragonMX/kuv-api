@@ -52,8 +52,8 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	[HttpGet("{id:int}/video")]
 	public async Task<IActionResult> GetVideo(int id)
 	{
-		var (filePath, contentType) = await creationService.GetCreationVideo(ViewerId(), id);
-		return PhysicalFile(filePath, contentType, enableRangeProcessing: true);
+		var (video, contentType) = await creationService.GetCreationVideo(ViewerId(), id);
+		return File(video.Content, contentType, video.LastModified, entityTag: null, enableRangeProcessing: true);
 	}
 
 	/// <summary>

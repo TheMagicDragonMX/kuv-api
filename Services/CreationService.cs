@@ -1,5 +1,6 @@
 using kuv_api.Data;
 using kuv_api.Models.Exceptions;
+using kuv_api.Models.Files;
 using kuv_api.Models.Entities;
 using kuv_api.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +16,9 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 	private readonly KuvDbContext db = db;
 
 	/// <summary>
-	/// Gets the full path and content type for a creation's video file.
+	/// Opens the video of a creation, with its content type. Whoever receives the video must dispose its stream.
 	/// </summary>
-	public async Task<(string FilePath, string ContentType)> GetCreationVideo(int viewerId, int creationId)
+	public async Task<(StoredFile Video, string ContentType)> GetCreationVideo(int viewerId, int creationId)
 	{
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
@@ -32,17 +33,14 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			throw new NotFoundException("This creation does not have a video file.");
 		}
 
-		var fullPath = storage.VideoPath(creation.Id, creation.VideoFileName);
-		if (!File.Exists(fullPath))
-		{
-			throw new NotFoundException("The video file was not found on the server.");
-		}
+		var video = await storage.OpenVideo(creation.Id, creation.VideoFileName)
+			?? throw new NotFoundException("The video file was not found on the server.");
 
 		var contentType = !string.IsNullOrWhiteSpace(creation.VideoMimeType)
 			? creation.VideoMimeType
 			: "video/webm";
 
-		return (fullPath, contentType);
+		return (video, contentType);
 	}
 
 	/// <summary>
@@ -127,7 +125,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		catch
 		{
 			// A creation without its files would be unusable, so it is taken back
-			storage.DeleteFolder(creation.Id);
+			await storage.DeleteFolder(creation.Id);
 			db.Creations.Remove(creation);
 			await db.SaveChangesAsync();
 
@@ -222,7 +220,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		await db.SaveChangesAsync();
 
 		// The row goes first: a folder left behind is only clutter, a row without its folder is a broken creation
-		storage.DeleteFolder(creation.Id);
+		await storage.DeleteFolder(creation.Id);
 	}
 
 	/// <summary>
