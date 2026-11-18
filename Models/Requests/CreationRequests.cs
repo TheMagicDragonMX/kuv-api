@@ -73,9 +73,16 @@ public sealed class CreateCreationRequest
 	public bool IsPublic { get; set; } = false;
 
 	/// <summary>
-	/// Optional recorded video file (e.g. webm).
+	/// The preview video recorded over the dark background (webm or mp4). Optional, but it comes with
+	/// <see cref="VideoLight"/> or not at all.
 	/// </summary>
-	public IFormFile? Video { get; set; }
+	public IFormFile? VideoDark { get; set; }
+
+	/// <summary>
+	/// The preview video recorded over the light background (webm or mp4). Optional, but it comes with
+	/// <see cref="VideoDark"/> or not at all.
+	/// </summary>
+	public IFormFile? VideoLight { get; set; }
 }
 
 /// <summary>
@@ -105,7 +112,14 @@ public sealed class UpdateCreationRequest
 	public bool? IsPublic { get; set; }
 
 	/// <summary>
-	/// Optional replacement video file.
+	/// The preview video recorded over the dark background (webm or mp4). Left as they were when missing, but it comes with
+	/// <see cref="VideoLight"/> or not at all.
 	/// </summary>
-	public IFormFile? Video { get; set; }
+	public IFormFile? VideoDark { get; set; }
+
+	/// <summary>
+	/// The preview video recorded over the light background (webm or mp4). Left as they were when missing, but it comes with
+	/// <see cref="VideoDark"/> or not at all.
+	/// </summary>
+	public IFormFile? VideoLight { get; set; }
 }
