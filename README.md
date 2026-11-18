@@ -107,19 +107,20 @@ Pictures are not in the database. Each is a file in the file store, in `pfp/`, n
 
 Programs, videos and profile pictures are files, not database rows, and they go through one `IFileStore` (`Services/Files/`). Since the database is shared by every API that connects to it, the files must be too, so there are two stores:
 
-- **`Remote`** (default): the files live on the VPS. The API reads and writes them over HTTP at `Files:RemoteUrl` (`https://api.kuv.lol/files/`), which is a WebDAV folder shared by nginx, so an API on a laptop sees the same files as the one on the server. It needs `Files:RemoteKey`.
+- **`Remote`** (default): the files live on the VPS. The API reads and writes them over HTTP at `Files:RemoteUrl` (`https://files.kuv.lol/`), which is a WebDAV folder shared by nginx on its own host, so an API on a laptop sees the same files as the one on the server. It needs `Files:RemoteKey`.
 - **`Disk`**: the files live in a folder of this machine, `Files:Root` (default `uploads/` next to the binaries). The server uses it, and a laptop can use it to work with no connection.
 
 | Setting | Meaning |
 | --- | --- |
 | `Files__Mode` | `Remote` (default) or `Disk` |
-| `Files__RemoteUrl` | Address of the shared folder, default `https://api.kuv.lol/files/` |
+| `Files__RemoteUrl` | Address of the shared folder, default `https://files.kuv.lol/` |
 | `Files__RemoteKey` | Password of the shared folder. Put it in your local `.env` (git-ignored), never in a committed file |
 | `Files__Root` | Folder used in `Disk` mode |
 
 - **Working offline:** set `Files__Mode=Disk` in `.env` and restart. Files saved in that mode stay on your machine; the server will not find them, and they are not uploaded when you go back to `Remote`.
-- **On the server** the API runs with `Files__Mode=Disk` and `Files__Root=/var/www/kuv-files` (in `kuv-api.env`), and nginx serves that same folder at `/files/` with HTTP basic auth (user `kuv`, password = the key). If `Files__Mode` were missing there, the API would try to call itself, so it refuses to start without `Files__RemoteKey`.
-- **nginx** (`/etc/nginx/conf.d/kuv-client.conf`, `api.kuv.lol` block): `location /files/` with `dav_methods PUT DELETE`, `create_full_put_path on`, `auth_basic` against `/etc/nginx/kuv-files.htpasswd`, `client_max_body_size 110m`. The folder `/var/www/kuv-files` is owned by `root:kuv-files` with the setgid bit; `nginx` is in that group and the API service runs with `UMask=0002` (`/etc/systemd/system/kuv-api.service.d/files.conf`), so both can replace and delete each other's files. SELinux label: `httpd_sys_rw_content_t`.
+- **On the server** the API runs with `Files__Mode=Disk` and `Files__Root=/var/www/kuv-files` (in `kuv-api.env`), and nginx serves that same folder at `https://files.kuv.lol/` with HTTP basic auth (user `kuv`, password = the key). If `Files__Mode` were missing there, the API would try to call itself, so it refuses to start without `Files__RemoteKey`.
+- **nginx** (`/etc/nginx/conf.d/kuv-client.conf`, the `files.kuv.lol` block, with a proxied DNS record in Cloudflare): `root /var/www/kuv-files` and a `location /` with `dav_methods PUT DELETE`, `create_full_put_path on`, `auth_basic` against `/etc/nginx/kuv-files.htpasswd`, `client_max_body_size 110m`. The folder `/var/www/kuv-files` is owned by `root:kuv-files` with the setgid bit; `nginx` is in that group and the API service runs with `UMask=0002` (`/etc/systemd/system/kuv-api.service.d/files.conf`), so both can replace and delete each other's files. SELinux label: `httpd_sys_rw_content_t`.
+- **Debug view** (`https://peek.kuv.lol/`): the same folder, read only (`GET`/`HEAD`, anything else is `403`), with folder listing and **no password**, to look at what is stored straight from the browser. It shows **private creations and their programs too**, so anyone who knows the address can read everything. It has its own proxied DNS record in Cloudflare. If that ever matters, put a login in front of it (Cloudflare Access, or `auth_basic` in its nginx block).
 - To rotate the key: `openssl rand -hex 32`, write `kuv:$(openssl passwd -apr1 KEY)` to `/etc/nginx/kuv-files.htpasswd`, reload nginx, and update every `.env`.
 - The folder is **data, not part of the deploy** (it is outside `/var/www/kuv-api`). Back it up with the database.
 
