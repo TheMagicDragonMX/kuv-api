@@ -16,10 +16,19 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 	private readonly KuvDbContext db = db;
 
 	/// <summary>
-	/// Opens the video of a creation, with its content type. Whoever receives the video must dispose its stream.
+	/// Opens the video of a creation for a theme, with its content type. Whoever receives the video must dispose its
+	/// stream.
 	/// </summary>
-	public async Task<(StoredFile Video, string ContentType)> GetCreationVideo(int viewerId, int creationId)
+	/// <exception cref="BadRequestException">
+	/// The theme is not one of <see cref="CreationStorage.VideoThemes"/>.
+	/// </exception>
+	public async Task<(StoredFile Video, string ContentType)> GetCreationVideo(int viewerId, int creationId, string theme)
 	{
+		if (!CreationStorage.VideoThemes.Contains(theme))
+		{
+			throw new BadRequestException("El tema del video debe ser dark o light.");
+		}
+
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
 
@@ -33,7 +42,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			throw new NotFoundException("This creation does not have a video file.");
 		}
 
-		return await storage.OpenVideo(creation.Id)
+		return await storage.OpenVideo(creation.Id, theme)
 			?? throw new NotFoundException("The video file was not found on the server.");
 	}
 
@@ -91,6 +100,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// Checked before anything is stored, so a bad program leaves no row and no folder behind
 		var programFile = validator.Parse(request.ProgramFile);
+		var videos = VideosOf(request.VideoDark, request.VideoLight);
 
 		var creation = new Creation
 		{
@@ -107,9 +117,9 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		{
 			await storage.WriteProgramFile(creation.Id, programFile);
 
-			if (request.Video != null && 0 < request.Video.Length)
+			if (videos is var (dark, light))
 			{
-				await storage.WriteVideo(creation.Id, request.Video);
+				await storage.WriteVideos(creation.Id, dark, light);
 				creation.HasVideo = true;
 				await db.SaveChangesAsync();
 			}
@@ -143,6 +153,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// Checked before anything changes, so a bad program leaves the creation as it was
 		var programFile = string.IsNullOrWhiteSpace(request.ProgramFile) ? null : validator.Parse(request.ProgramFile);
+		var videos = VideosOf(request.VideoDark, request.VideoLight);
 
 		if (!string.IsNullOrWhiteSpace(request.Title))
 		{
@@ -161,9 +172,9 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			await storage.WriteProgramFile(creation.Id, programFile);
 		}
 
-		if (request.Video != null && 0 < request.Video.Length)
+		if (videos is var (dark, light))
 		{
-			await storage.WriteVideo(creation.Id, request.Video);
+			await storage.WriteVideos(creation.Id, dark, light);
 			creation.HasVideo = true;
 		}
 
@@ -209,6 +220,25 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// The row goes first: a folder left behind is only clutter, a row without its folder is a broken creation
 		await storage.DeleteFolder(creation.Id);
+	}
+
+	/// <summary>
+	/// The two videos of a request, one per theme, or null when it brings none.
+	/// </summary>
+	/// <exception cref="BadRequestException">
+	/// Only one of the two came: a creation has a video for both themes or for none.
+	/// </exception>
+	private static (IFormFile Dark, IFormFile Light)? VideosOf(IFormFile? dark, IFormFile? light)
+	{
+		var hasDark = dark is not null && 0 < dark.Length;
+		var hasLight = light is not null && 0 < light.Length;
+
+		if (hasDark != hasLight)
+		{
+			throw new BadRequestException("Se necesitan los dos videos, el del tema oscuro y el del claro.");
+		}
+
+		return hasDark ? (dark!, light!) : null;
 	}
 
 	/// <summary>

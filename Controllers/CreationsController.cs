@@ -47,12 +47,13 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	}
 
 	/// <summary>
-	/// Streams or serves the video file for a creation.
+	/// Streams or serves the video file for a creation, the one recorded for a theme (<c>dark</c>, the default, or
+	/// <c>light</c>).
 	/// </summary>
 	[HttpGet("{id:int}/video")]
-	public async Task<IActionResult> GetVideo(int id)
+	public async Task<IActionResult> GetVideo(int id, [FromQuery] string theme = "dark")
 	{
-		var (video, contentType) = await creationService.GetCreationVideo(ViewerId(), id);
+		var (video, contentType) = await creationService.GetCreationVideo(ViewerId(), id, theme);
 		return File(video.Content, contentType, video.LastModified, entityTag: null, enableRangeProcessing: true);
 	}
 

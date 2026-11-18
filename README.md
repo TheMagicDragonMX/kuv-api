@@ -118,7 +118,7 @@ Programs, videos and profile pictures are files, not database rows, and they go 
 | `Files__Root` | Folder used in `Disk` mode |
 
 - **Working offline:** set `Files__Mode=Disk` in `.env` and restart. Files saved in that mode stay on your machine; the server will not find them, and they are not uploaded when you go back to `Remote`.
-- **On the server** the API runs with `Files__Mode=Disk` and `Files__Root=/var/www/kuv-files` (in `kuv-api.env`), and nginx serves that same folder at `https://files.kuv.lol/` with HTTP basic auth (user `kuv`, password = the key). If `Files__Mode` were missing there, the API would try to call itself, so it refuses to start without `Files__RemoteKey`.
+- **On the server** the API runs with `Files__Mode=Disk` and `Files__Root=/var/www/kuv-files`. They are in `Deploy/kuv-api.env`, the template every deploy turns into the server's `kuv-api.env` (overwriting it, so never set them by hand there), and nginx serves that same folder at `https://files.kuv.lol/` with HTTP basic auth (user `kuv`, password = the key). If `Files__Mode` were missing there, the API would try to call itself, so it refuses to start without `Files__RemoteKey`.
 - **nginx** (`/etc/nginx/conf.d/kuv-client.conf`, the `files.kuv.lol` block, with a proxied DNS record in Cloudflare): `root /var/www/kuv-files` and a `location /` with `dav_methods PUT DELETE`, `create_full_put_path on`, `auth_basic` against `/etc/nginx/kuv-files.htpasswd`, `client_max_body_size 110m`. The folder `/var/www/kuv-files` is owned by `root:kuv-files` with the setgid bit; `nginx` is in that group and the API service runs with `UMask=0002` (`/etc/systemd/system/kuv-api.service.d/files.conf`), so both can replace and delete each other's files. SELinux label: `httpd_sys_rw_content_t`.
 - **Debug view** (`https://peek.kuv.lol/`): the same folder, read only (`GET`/`HEAD`, anything else is `403`), with folder listing and **no password**, to look at what is stored straight from the browser. It shows **private creations and their programs too**, so anyone who knows the address can read everything. It has its own proxied DNS record in Cloudflare. If that ever matters, put a login in front of it (Cloudflare Access, or `auth_basic` in its nginx block).
 - To rotate the key: `openssl rand -hex 32`, write `kuv:$(openssl passwd -apr1 KEY)` to `/etc/nginx/kuv-files.htpasswd`, reload nginx, and update every `.env`.
@@ -126,12 +126,13 @@ Programs, videos and profile pictures are files, not database rows, and they go 
 
 ## Creations
 
-A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, whether it has a video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the video, always named `preview` (`preview.webm` or `preview.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
+A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, whether it has a video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the preview video, recorded twice by the web app: over the dark background (`preview-dark.webm` or `.mp4`) and over the light one (`preview-light.webm` or `.mp4`), so each theme shows the cube on its own background. Each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
 
 ```
 creations/7/
-├── program.json     the complete program (see below)
-└── preview.webm     the recording of the last save
+├── program.json        the complete program (see below)
+├── preview-dark.webm   the recording of the last save, over the dark background
+└── preview-light.webm  the same, over the light background
 ```
 
 ### The program file
@@ -155,14 +156,15 @@ The home page of the web app is a feed of categories. Each category has its own 
 
 | Endpoint | What it does |
 |---|---|
-| `GET /feed/new` | The newest public creations, the most recent first. Each one has `id`, `title`, `authorId`, `authorUsername`, `authorPhoto` (a path on the API, or null), `hasVideo` and `createdAt`; its video is at `/creations/{id}/video`. |
+| `GET /feed/new` | The newest public creations, the most recent first. Each one has `id`, `title`, `authorId`, `authorUsername`, `authorPhoto` (a path on the API, or null), `hasVideo` and `createdAt`; its video is at `/creations/{id}/video?theme=dark` (or `light`). |
 
 The other categories (most liked today, this week, all time) do not have an endpoint yet: the web app shows them empty.
 
 ### Endpoints
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
-- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
+- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `isPublic`, `programFile` (the program file as JSON text) and optionally `videoDark` and `videoLight`, the two recordings, which come together or not at all (`400` when only one does). In a `PUT`, a missing `programFile` or missing videos leave the stored ones as they were.
+- `GET /creations/{id}/video?theme=` serves the recording for `dark` (the default) or `light`; any other theme is `400`. Creations saved when there was a single `preview.webm` serve that one for both themes until their video is generated again.
 - The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `creations/*.webm`, if any are left on a server, can be deleted by hand.
 
 ## EF Core commands
