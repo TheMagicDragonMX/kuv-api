@@ -36,8 +36,8 @@ namespace kuv_api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<double>("DurationSeconds")
-                        .HasColumnType("double precision");
+                    b.Property<bool>("HasVideo")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
@@ -51,12 +51,6 @@ namespace kuv_api.Migrations
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("VideoFileName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VideoMimeType")
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

@@ -6,7 +6,7 @@ namespace kuv_api.Services;
 
 /// <summary>
 /// Keeps the files of the creations in the <see cref="IFileStore"/>. Each creation has its own folder, <c>creations/{id}</c>, holding its
-/// program file (<c>program.json</c>) and its video (<c>video.webm</c> or <c>video.mp4</c>). The database only
+/// program file (<c>program.json</c>) and its video (<c>preview.webm</c> or <c>preview.mp4</c>). The database only
 /// holds what describes the creation, never its program.
 /// </summary>
 public sealed class CreationStorage(IFileStore files)
@@ -19,7 +19,7 @@ public sealed class CreationStorage(IFileStore files)
     /// <summary>
     /// Name, without extension, of the video inside the folder of a creation.
     /// </summary>
-    private const string VideoBaseName = "video";
+    private const string VideoBaseName = "preview";
 
     /// <summary>
     /// The extensions a video can have. Anything else is stored as <c>.webm</c>, so the name of the uploaded file
@@ -85,10 +85,7 @@ public sealed class CreationStorage(IFileStore files)
     /// <param name="file">
     /// The uploaded video.
     /// </param>
-    /// <returns>
-    /// The name of the video file inside the folder of the creation.
-    /// </returns>
-    public async Task<string> WriteVideo(int creationId, IFormFile file)
+    public async Task WriteVideo(int creationId, IFormFile file)
     {
         await DeleteVideos(creationId);
 
@@ -97,24 +94,31 @@ public sealed class CreationStorage(IFileStore files)
 
         await using var content = file.OpenReadStream();
         await files.Write($"{FolderOf(creationId)}/{fileName}", content);
-
-        return fileName;
     }
 
     /// <summary>
-    /// Opens the video of a creation.
+    /// Opens the video of a creation, whichever of the allowed extensions it was saved with.
     /// </summary>
     /// <param name="creationId">
     /// The creation.
     /// </param>
-    /// <param name="fileName">
-    /// The name of the video file stored in the database. Only its name is used, never a path in it.
-    /// </param>
     /// <returns>
-    /// The video, or null when it is not stored.
+    /// The video with its content type, or null when it is not stored.
     /// </returns>
-    public Task<StoredFile?> OpenVideo(int creationId, string fileName) =>
-        files.Open($"{FolderOf(creationId)}/{Path.GetFileName(fileName)}");
+    public async Task<(StoredFile Video, string ContentType)?> OpenVideo(int creationId)
+    {
+        foreach (var extension in VideoExtensions)
+        {
+            var video = await files.Open($"{FolderOf(creationId)}/{VideoBaseName}{extension}");
+
+            if (video is not null)
+            {
+                return (video, ".mp4" == extension ? "video/mp4" : "video/webm");
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Deletes the videos of a creation, keeping the rest of its folder.

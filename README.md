@@ -126,12 +126,12 @@ Programs, videos and profile pictures are files, not database rows, and they go 
 
 ## Creations
 
-A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, duration of the recording, the name of its video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the video (`video.webm` or `video.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
+A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, whether it has a video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the video, always named `preview` (`preview.webm` or `preview.mp4`), so each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
 
 ```
 creations/7/
 ├── program.json     the complete program (see below)
-└── video.webm       the recording of the last save
+└── preview.webm     the recording of the last save
 ```
 
 ### The program file
@@ -152,7 +152,7 @@ creations/7/
 ### Endpoints
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
-- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `durationSeconds`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
+- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `isPublic`, `programFile` (the program file as JSON text) and optionally `video`. In a `PUT`, a missing `programFile` or `video` leaves the stored one as it was.
 - The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `creations/*.webm`, if any are left on a server, can be deleted by hand.
 
 ## EF Core commands

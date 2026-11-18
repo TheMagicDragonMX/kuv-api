@@ -10,7 +10,6 @@ public record CreationResponse(
 	int UserId,
 	string Title,
 	string? Description,
-	double DurationSeconds,
 	bool HasVideo,
 	bool IsPublic,
 	DateTime CreatedAt,
@@ -69,11 +68,6 @@ public sealed class CreateCreationRequest
 	public required string ProgramFile { get; set; }
 
 	/// <summary>
-	/// Animation duration in seconds.
-	/// </summary>
-	public double DurationSeconds { get; set; }
-
-	/// <summary>
 	/// Whether it's public. Defaults to false.
 	/// </summary>
 	public bool IsPublic { get; set; } = false;
@@ -104,11 +98,6 @@ public sealed class UpdateCreationRequest
 	/// missing.
 	/// </summary>
 	public string? ProgramFile { get; set; }
-
-	/// <summary>
-	/// Animation duration in seconds. Left as it was when zero.
-	/// </summary>
-	public double DurationSeconds { get; set; }
 
 	/// <summary>
 	/// Whether it's public.

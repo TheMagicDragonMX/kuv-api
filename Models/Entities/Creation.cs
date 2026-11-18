@@ -29,19 +29,9 @@ public class Creation : BaseEntity, ICreatedAt, IUpdatedAt
 	public string? Description { get; set; }
 
 	/// <summary>
-	/// Duration of the recorded animation in seconds.
+	/// Whether the creation has a generated video, the <c>preview</c> file in its folder (<c>creations/{id}</c> of the file store).
 	/// </summary>
-	public double DurationSeconds { get; set; }
-
-	/// <summary>
-	/// Name of the video file inside the folder of the creation (<c>creations/{id}</c> of the file store), or null when it has no video.
-	/// </summary>
-	public string? VideoFileName { get; set; }
-
-	/// <summary>
-	/// Content type of the video file (e.g. video/webm).
-	/// </summary>
-	public string? VideoMimeType { get; set; }
+	public bool HasVideo { get; set; }
 
 	/// <summary>
 	/// Whether this creation is public or private. Defaults to false (private).

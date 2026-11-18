@@ -28,19 +28,13 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			throw new ForbiddenException("You cannot access this creation.");
 		}
 
-		if (string.IsNullOrWhiteSpace(creation.VideoFileName))
+		if (!creation.HasVideo)
 		{
 			throw new NotFoundException("This creation does not have a video file.");
 		}
 
-		var video = await storage.OpenVideo(creation.Id, creation.VideoFileName)
+		return await storage.OpenVideo(creation.Id)
 			?? throw new NotFoundException("The video file was not found on the server.");
-
-		var contentType = !string.IsNullOrWhiteSpace(creation.VideoMimeType)
-			? creation.VideoMimeType
-			: "video/webm";
-
-		return (video, contentType);
 	}
 
 	/// <summary>
@@ -103,7 +97,6 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			UserId = userId,
 			Title = request.Title.Trim(),
 			Description = request.Description?.Trim(),
-			DurationSeconds = request.DurationSeconds,
 			IsPublic = request.IsPublic,
 		};
 
@@ -116,8 +109,8 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 			if (request.Video != null && 0 < request.Video.Length)
 			{
-				creation.VideoFileName = await storage.WriteVideo(creation.Id, request.Video);
-				creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
+				await storage.WriteVideo(creation.Id, request.Video);
+				creation.HasVideo = true;
 				await db.SaveChangesAsync();
 			}
 		}
@@ -158,11 +151,6 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		creation.Description = request.Description?.Trim();
 
-		if (0 < request.DurationSeconds)
-		{
-			creation.DurationSeconds = request.DurationSeconds;
-		}
-
 		if (request.IsPublic.HasValue)
 		{
 			creation.IsPublic = request.IsPublic.Value;
@@ -175,8 +163,8 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		if (request.Video != null && 0 < request.Video.Length)
 		{
-			creation.VideoFileName = await storage.WriteVideo(creation.Id, request.Video);
-			creation.VideoMimeType = request.Video.ContentType ?? "video/webm";
+			await storage.WriteVideo(creation.Id, request.Video);
+			creation.HasVideo = true;
 		}
 
 		await db.SaveChangesAsync();
@@ -244,8 +232,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			creation.UserId,
 			creation.Title,
 			creation.Description,
-			creation.DurationSeconds,
-			!string.IsNullOrWhiteSpace(creation.VideoFileName),
+			creation.HasVideo,
 			creation.IsPublic,
 			creation.CreatedAt,
 			creation.UpdatedAt
