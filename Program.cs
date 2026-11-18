@@ -79,12 +79,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew                   = TimeSpan.FromSeconds(30)
         };
 
-        // Browsers cannot set headers on a WebSocket or media elements easily, so tokens can come in the query string.
+        // Browsers cannot set headers on a WebSocket or media elements (videos, thumbnails) easily, so tokens can come in the query string.
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                if ((context.Request.Path.StartsWithSegments("/ws/client") || context.Request.Path.Value?.Contains("/video") == true)
+                if ((context.Request.Path.StartsWithSegments("/ws/client") || context.Request.Path.Value?.Contains("/video") == true || context.Request.Path.Value?.EndsWith("/thumbnail") == true)
                     && (context.Request.Query.TryGetValue("access_token", out var token) || context.Request.Query.TryGetValue("token", out token)))
                 {
                     context.Token = token;

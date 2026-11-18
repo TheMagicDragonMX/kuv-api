@@ -9,7 +9,7 @@ namespace kuv_api.Services;
 
 /// <summary>
 /// Manages user creations: what describes them is in the database, and each one has its own folder on disk with its
-/// program file and its video (see <see cref="CreationStorage"/>).
+/// program file, its videos and its thumbnail (see <see cref="CreationStorage"/>).
 /// </summary>
 public sealed class CreationService(KuvDbContext db, CreationStorage storage, ProgramFileValidator validator)
 {
@@ -44,6 +44,32 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		return await storage.OpenVideo(creation.Id, theme)
 			?? throw new NotFoundException("The video file was not found on the server.");
+	}
+
+	/// <summary>
+	/// Opens the thumbnail of a creation, a 64x64 PNG. Whoever receives it must dispose its stream.
+	/// </summary>
+	/// <exception cref="NotFoundException">
+	/// The creation does not exist, or has no thumbnail (it has no video, or its video was made before there were
+	/// thumbnails).
+	/// </exception>
+	public async Task<StoredFile> GetCreationThumbnail(int viewerId, int creationId)
+	{
+		var creation = await db.Creations.FindAsync(creationId)
+			?? throw new NotFoundException($"Creation {creationId} was not found.");
+
+		if (creation.UserId != viewerId && !creation.IsPublic)
+		{
+			throw new ForbiddenException("You cannot access this creation.");
+		}
+
+		if (!creation.HasVideo)
+		{
+			throw new NotFoundException("This creation does not have a thumbnail.");
+		}
+
+		return await storage.OpenThumbnail(creation.Id)
+			?? throw new NotFoundException("The thumbnail was not found on the server.");
 	}
 
 	/// <summary>
@@ -89,7 +115,8 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 	}
 
 	/// <summary>
-	/// Creates a new creation: a row in the database, a folder with its program file and, when given, its video.
+	/// Creates a new creation: a row in the database, a folder with its program file and, when given, its preview
+	/// (videos and thumbnail).
 	/// </summary>
 	public async Task<CreationDetailResponse> Create(int userId, CreateCreationRequest request)
 	{
@@ -100,7 +127,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// Checked before anything is stored, so a bad program leaves no row and no folder behind
 		var programFile = validator.Parse(request.ProgramFile);
-		var videos = VideosOf(request.VideoDark, request.VideoLight);
+		var preview = PreviewOf(request.VideoDark, request.VideoLight, request.Thumbnail);
 
 		var creation = new Creation
 		{
@@ -117,9 +144,10 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		{
 			await storage.WriteProgramFile(creation.Id, programFile);
 
-			if (videos is var (dark, light))
+			if (preview is var (dark, light, thumbnail))
 			{
 				await storage.WriteVideos(creation.Id, dark, light);
+				await storage.WriteThumbnail(creation.Id, thumbnail);
 				creation.HasVideo = true;
 				await db.SaveChangesAsync();
 			}
@@ -153,7 +181,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// Checked before anything changes, so a bad program leaves the creation as it was
 		var programFile = string.IsNullOrWhiteSpace(request.ProgramFile) ? null : validator.Parse(request.ProgramFile);
-		var videos = VideosOf(request.VideoDark, request.VideoLight);
+		var preview = PreviewOf(request.VideoDark, request.VideoLight, request.Thumbnail);
 
 		if (!string.IsNullOrWhiteSpace(request.Title))
 		{
@@ -172,9 +200,10 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 			await storage.WriteProgramFile(creation.Id, programFile);
 		}
 
-		if (videos is var (dark, light))
+		if (preview is var (dark, light, thumbnail))
 		{
 			await storage.WriteVideos(creation.Id, dark, light);
+			await storage.WriteThumbnail(creation.Id, thumbnail);
 			creation.HasVideo = true;
 		}
 
@@ -223,22 +252,55 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 	}
 
 	/// <summary>
-	/// The two videos of a request, one per theme, or null when it brings none.
+	/// The preview of a request (its two videos, one per theme, and its thumbnail), or null when it brings none.
 	/// </summary>
 	/// <exception cref="BadRequestException">
-	/// Only one of the two came: a creation has a video for both themes or for none.
+	/// Only part of it came (a creation has the three files or none), or the thumbnail is not a small PNG.
 	/// </exception>
-	private static (IFormFile Dark, IFormFile Light)? VideosOf(IFormFile? dark, IFormFile? light)
+	private static (IFormFile Dark, IFormFile Light, IFormFile Thumbnail)? PreviewOf(IFormFile? dark, IFormFile? light, IFormFile? thumbnail)
 	{
 		var hasDark = dark is not null && 0 < dark.Length;
 		var hasLight = light is not null && 0 < light.Length;
+		var hasThumbnail = thumbnail is not null && 0 < thumbnail.Length;
 
-		if (hasDark != hasLight)
+		if (hasDark != hasLight || hasDark != hasThumbnail)
 		{
-			throw new BadRequestException("Se necesitan los dos videos, el del tema oscuro y el del claro.");
+			throw new BadRequestException("Se necesitan los dos videos, el del tema oscuro y el del claro, y la miniatura.");
 		}
 
-		return hasDark ? (dark!, light!) : null;
+		if (!hasDark)
+		{
+			return null;
+		}
+
+		if (MaxThumbnailBytes < thumbnail!.Length || !IsPng(thumbnail))
+		{
+			throw new BadRequestException("La miniatura debe ser una imagen PNG de menos de 64 KB.");
+		}
+
+		return (dark!, light!, thumbnail);
+	}
+
+	/// <summary>
+	/// The largest thumbnail accepted, in bytes. A 64x64 PNG takes far less, even with every pixel different.
+	/// </summary>
+	private const long MaxThumbnailBytes = 64 * 1024;
+
+	/// <summary>
+	/// The first bytes of every PNG file.
+	/// </summary>
+	private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+	/// <summary>
+	/// Whether an uploaded file starts like a PNG, whatever its name or content type say.
+	/// </summary>
+	private static bool IsPng(IFormFile file)
+	{
+		using var content = file.OpenReadStream();
+		var header = new byte[PngSignature.Length];
+
+		return header.Length == content.ReadAtLeast(header, header.Length, throwOnEndOfStream: false)
+			&& header.SequenceEqual(PngSignature);
 	}
 
 	/// <summary>

@@ -7,8 +7,8 @@ namespace kuv_api.Services;
 /// <summary>
 /// Keeps the files of the creations in the <see cref="IFileStore"/>. Each creation has its own folder, <c>creations/{id}</c>, holding its
 /// program file (<c>program.json</c>) and its preview video, recorded twice: over the dark background of the web
-/// app (<c>preview-dark.webm</c> or <c>.mp4</c>) and over the light one (<c>preview-light.webm</c> or <c>.mp4</c>).
-/// The database only holds what describes the creation, never its program.
+/// app (<c>preview-dark.webm</c> or <c>.mp4</c>) and over the light one (<c>preview-light.webm</c> or <c>.mp4</c>),
+/// and its thumbnail (<c>thumbnail.png</c>), recorded with the videos. The database only holds what describes the creation, never its program.
 /// </summary>
 public sealed class CreationStorage(IFileStore files)
 {
@@ -16,6 +16,11 @@ public sealed class CreationStorage(IFileStore files)
     /// Name of the program file inside the folder of a creation.
     /// </summary>
     public const string ProgramFileName = "program.json";
+
+    /// <summary>
+    /// Name of the thumbnail inside the folder of a creation: a 64x64 PNG of one face of the cube.
+    /// </summary>
+    private const string ThumbnailFileName = "thumbnail.png";
 
     /// <summary>
     /// Start of the name of the videos inside the folder of a creation. Each theme adds its name
@@ -157,6 +162,33 @@ public sealed class CreationStorage(IFileStore files)
             }
         }
     }
+
+    /// <summary>
+    /// Saves the uploaded thumbnail of a creation, replacing the one it had.
+    /// </summary>
+    /// <param name="creationId">
+    /// The creation.
+    /// </param>
+    /// <param name="thumbnail">
+    /// The thumbnail, an already checked PNG.
+    /// </param>
+    public async Task WriteThumbnail(int creationId, IFormFile thumbnail)
+    {
+        await using var content = thumbnail.OpenReadStream();
+        await files.Write($"{FolderOf(creationId)}/{ThumbnailFileName}", content);
+    }
+
+    /// <summary>
+    /// Opens the thumbnail of a creation.
+    /// </summary>
+    /// <param name="creationId">
+    /// The creation.
+    /// </param>
+    /// <returns>
+    /// The thumbnail (a PNG), or null when it is not stored, as with creations whose video was made before there
+    /// were thumbnails.
+    /// </returns>
+    public Task<StoredFile?> OpenThumbnail(int creationId) => files.Open($"{FolderOf(creationId)}/{ThumbnailFileName}");
 
     /// <summary>
     /// Deletes the whole folder of a creation, with its program file and its videos.

@@ -74,15 +74,21 @@ public sealed class CreateCreationRequest
 
 	/// <summary>
 	/// The preview video recorded over the dark background (webm or mp4). Optional, but it comes with
-	/// <see cref="VideoLight"/> or not at all.
+	/// <see cref="VideoLight"/> and <see cref="Thumbnail"/> or not at all.
 	/// </summary>
 	public IFormFile? VideoDark { get; set; }
 
 	/// <summary>
 	/// The preview video recorded over the light background (webm or mp4). Optional, but it comes with
-	/// <see cref="VideoDark"/> or not at all.
+	/// <see cref="VideoDark"/> and <see cref="Thumbnail"/> or not at all.
 	/// </summary>
 	public IFormFile? VideoLight { get; set; }
+
+	/// <summary>
+	/// The thumbnail recorded with the videos: a 64x64 PNG of the face with the most LEDs on. It comes with the
+	/// videos or not at all.
+	/// </summary>
+	public IFormFile? Thumbnail { get; set; }
 }
 
 /// <summary>
@@ -113,13 +119,19 @@ public sealed class UpdateCreationRequest
 
 	/// <summary>
 	/// The preview video recorded over the dark background (webm or mp4). Left as they were when missing, but it comes with
-	/// <see cref="VideoLight"/> or not at all.
+	/// <see cref="VideoLight"/> and <see cref="Thumbnail"/> or not at all.
 	/// </summary>
 	public IFormFile? VideoDark { get; set; }
 
 	/// <summary>
 	/// The preview video recorded over the light background (webm or mp4). Left as they were when missing, but it comes with
-	/// <see cref="VideoDark"/> or not at all.
+	/// <see cref="VideoDark"/> and <see cref="Thumbnail"/> or not at all.
 	/// </summary>
 	public IFormFile? VideoLight { get; set; }
+
+	/// <summary>
+	/// The thumbnail recorded with the videos: a 64x64 PNG of the face with the most LEDs on. It comes with the
+	/// videos or not at all.
+	/// </summary>
+	public IFormFile? Thumbnail { get; set; }
 }

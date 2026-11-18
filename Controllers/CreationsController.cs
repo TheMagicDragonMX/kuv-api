@@ -58,6 +58,17 @@ public class CreationsController(CreationService creationService) : ControllerBa
 	}
 
 	/// <summary>
+	/// Serves the thumbnail of a creation: a 64x64 PNG of the face of the cube with the most LEDs on during its
+	/// video, recorded with it.
+	/// </summary>
+	[HttpGet("{id:int}/thumbnail")]
+	public async Task<IActionResult> GetThumbnail(int id)
+	{
+		var thumbnail = await creationService.GetCreationThumbnail(ViewerId(), id);
+		return File(thumbnail.Content, "image/png");
+	}
+
+	/// <summary>
 	/// Creates a new creation for the current user.
 	/// </summary>
 	[HttpPost]

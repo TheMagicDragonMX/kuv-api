@@ -126,7 +126,7 @@ Programs, videos and profile pictures are files, not database rows, and they go 
 
 ## Creations
 
-A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, whether it has a video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the preview video, recorded twice by the web app: over the dark background (`preview-dark.webm` or `.mp4`) and over the light one (`preview-light.webm` or `.mp4`), so each theme shows the cube on its own background. Each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
+A creation is split in two. **The database describes it** (`Models/Entities/Creation.cs`): owner, title, description, visibility, whether it has a video, and when it was created and updated. **Its folder holds the program**: `creations/{id}/` in the file store has `program.json` and the preview video, recorded twice by the web app: over the dark background (`preview-dark.webm` or `.mp4`) and over the light one (`preview-light.webm` or `.mp4`), so each theme shows the cube on its own background, and `thumbnail.png`, recorded with them: a 64x64 picture of the face that had the most LEDs on during the video, which the feed shows. Each creation lives in its own folder and deleting it deletes the folder (`Services/CreationStorage.cs`).
 
 ```
 creations/7/
@@ -156,15 +156,16 @@ The home page of the web app is a feed of categories. Each category has its own 
 
 | Endpoint | What it does |
 |---|---|
-| `GET /feed/new` | The newest public creations, the most recent first. Each one has `id`, `title`, `authorId`, `authorUsername`, `authorPhoto` (a path on the API, or null), `hasVideo` and `createdAt`; its video is at `/creations/{id}/video?theme=dark` (or `light`). |
+| `GET /feed/new` | The newest public creations, the most recent first. Each one has `id`, `title`, `authorId`, `authorUsername`, `authorPhoto` (a path on the API, or null), `hasVideo` and `createdAt`; its video is at `/creations/{id}/video?theme=dark` (or `light`) and its thumbnail at `/creations/{id}/thumbnail`. |
 
 The other categories (most liked today, this week, all time) do not have an endpoint yet: the web app shows them empty.
 
 ### Endpoints
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
-- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `isPublic`, `programFile` (the program file as JSON text) and optionally `videoDark` and `videoLight`, the two recordings, which come together or not at all (`400` when only one does). In a `PUT`, a missing `programFile` or missing videos leave the stored ones as they were.
+- `POST` and `PUT` are `multipart/form-data` with `title`, `description`, `isPublic`, `programFile` (the program file as JSON text) and optionally the preview: `videoDark` and `videoLight`, the two recordings, and `thumbnail`, a PNG of at most 64 KB. The three come together or not at all (`400` when only some do, or when the thumbnail is not a PNG). In a `PUT`, a missing `programFile` or missing videos leave the stored ones as they were.
 - `GET /creations/{id}/video?theme=` serves the recording for `dark` (the default) or `light`; any other theme is `400`. Creations saved when there was a single `preview.webm` serve that one for both themes until their video is generated again.
+- `GET /creations/{id}/thumbnail` serves the thumbnail (`image/png`); `404` when the creation has none, as with videos made before there were thumbnails. Like the video, it takes the token as `?access_token=` so an `<img>` can load it.
 - The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `creations/*.webm`, if any are left on a server, can be deleted by hand.
 
 ## EF Core commands
