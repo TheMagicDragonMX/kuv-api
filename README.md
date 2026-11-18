@@ -149,6 +149,16 @@ creations/7/
 - The schema fixes the structure: `version`, `program` (`version`, `config`, `objects` as `create` blocks, `scripts` with a trigger and blocks that have an `op`) and `environment` (`background`, `backgrounds`, `startBackground`, `brightness`). Pictures are 64 × 64 colors written `#RRGGBB`, like the ones in the blocks.
 - The fields of each block are **not** in the schema: they are checked by the engine (`kuv-client/src/app/cube/engine/blocks`), so they live in one place only. When the structure changes, change the schema, `program.ts` in the client and the Python port together, and bump `version`.
 
+### Feed
+
+The home page of the web app is a feed of categories. Each category has its own endpoint under `/feed` (`Controllers/FeedController.cs`, `Services/FeedService.cs`) and needs a token. They only ever return **public** creations, with the author's username and picture, and take `?limit=` (default `20`, between `1` and `50`).
+
+| Endpoint | What it does |
+|---|---|
+| `GET /feed/new` | The newest public creations, the most recent first. Each one has `id`, `title`, `authorId`, `authorUsername`, `authorPhoto` (a path on the API, or null), `hasVideo` and `createdAt`; its video is at `/creations/{id}/video`. |
+
+The other categories (most liked today, this week, all time) do not have an endpoint yet: the web app shows them empty.
+
 ### Endpoints
 
 - Lists (`GET /creations/me`, `GET /creations/user/{id}`) return the description of each creation, **without** its program. `GET /creations/{id}`, `POST /creations` and `PUT /creations/{id}` return the description plus `programFile`, the content of `program.json` as an object.
