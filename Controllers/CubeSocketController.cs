@@ -79,7 +79,7 @@ public class CubeSocketController(
 
         using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-        await hub.RunClient(cubeId, socket, HttpContext.RequestAborted);
+        await hub.RunClient(cubeId, userId, socket, HttpContext.RequestAborted);
     }
 
     /// <summary>

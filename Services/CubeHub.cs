@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
+using kuv_api.Models.Exceptions;
 using kuv_api.Models.Messages;
 
 namespace kuv_api.Services;
@@ -9,9 +10,28 @@ namespace kuv_api.Services;
 /// Routes messages between the cubes and the clients connected to them: commands go from a client to its cube, events
 /// go from a cube to all its clients. It lives as long as the server and keeps everything in memory.
 /// </summary>
-public class CubeHub(ILogger<CubeHub> logger)
+/// <remarks>
+/// Every command is forwarded as it is, except <c>run_creation</c>: the server reads that creation's program file and
+/// sends it to the cube as <c>run_program</c>, so a client never uploads a whole program to show a saved creation.
+/// </remarks>
+public class CubeHub(ILogger<CubeHub> logger, IServiceScopeFactory scopeFactory)
 {
+    /// <summary>
+    /// Command of a client: show a saved creation on the cube. Payload: <c>{ creationId: number }</c>.
+    /// </summary>
+    public const string CommandRunCreation = "run_creation";
+
+    /// <summary>
+    /// Command of the cube: run a program file. The server sends it with the program file of a creation as payload.
+    /// </summary>
+    public const string CommandRunProgram = "run_program";
+
     private readonly ILogger<CubeHub> logger = logger;
+
+    /// <summary>
+    /// Opens a scope for each <c>run_creation</c>: the hub lives as long as the server, the database does not.
+    /// </summary>
+    private readonly IServiceScopeFactory scopeFactory = scopeFactory;
 
     /// <summary>
     /// The connected cube of each cube id.
@@ -78,13 +98,16 @@ public class CubeHub(ILogger<CubeHub> logger)
     /// <param name="cubeId">
     /// Identifier of the cube the client talks to.
     /// </param>
+    /// <param name="userId">
+    /// The signed-in user of the client, who must be allowed to see the creations they send.
+    /// </param>
     /// <param name="socket">
     /// Accepted socket of the client.
     /// </param>
     /// <param name="cancellationToken">
     /// Cancelled when the connection or the server goes away.
     /// </param>
-    public async Task RunClient(string cubeId, WebSocket socket, CancellationToken cancellationToken)
+    public async Task RunClient(string cubeId, int userId, WebSocket socket, CancellationToken cancellationToken)
     {
         var link = new SocketLink(socket);
         var connectionId = Guid.NewGuid();
@@ -97,7 +120,7 @@ public class CubeHub(ILogger<CubeHub> logger)
             await link.Send(CubeStatus(cubes.ContainsKey(cubeId)));
 
             await link.Receive(
-                message => Forward(cubeId, link, message),
+                message => message.Name == CommandRunCreation ? RunCreation(cubeId, userId, link, message) : Forward(cubeId, link, message),
                 reason => link.Send(Error(null, "invalid_message", reason)),
                 cancellationToken
             );
@@ -106,6 +129,47 @@ public class CubeHub(ILogger<CubeHub> logger)
         {
             group.TryRemove(connectionId, out _);
         }
+    }
+
+    /// <summary>
+    /// Sends the program file of a creation to the cube as <c>run_program</c>, or answers the client with an error when
+    /// the payload has no creation id or the user may not see that creation.
+    /// </summary>
+    private async Task RunCreation(string cubeId, int userId, SocketLink client, CubeMessage command)
+    {
+        var id = command.Id ?? Guid.NewGuid().ToString();
+
+        if (command.Payload is not { ValueKind: JsonValueKind.Object } payload ||
+            !payload.TryGetProperty("creationId", out var value) ||
+            !value.TryGetInt32(out var creationId)
+        )
+        {
+            await client.Send(Error(id, "invalid_payload", "run_creation needs a creationId."));
+
+            return;
+        }
+
+        JsonElement programFile;
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+
+            var creations = scope.ServiceProvider.GetRequiredService<CreationService>();
+
+            programFile = JsonSerializer.SerializeToElement(await creations.GetProgramFile(userId, creationId));
+        }
+        catch (KuvException error)
+        {
+            // A socket has no status codes: the error goes back to the client as an "error" message
+            await client.Send(Error(id, "creation_unavailable", error.Message));
+
+            return;
+        }
+
+        logger.LogInformation("Sending creation {CreationId} to cube {CubeId}.", creationId, cubeId);
+
+        await Forward(cubeId, client, new CubeMessage(CommandRunProgram, id, Payload: programFile));
     }
 
     /// <summary>

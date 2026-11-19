@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using kuv_api.Data;
 using kuv_api.Models.Exceptions;
 using kuv_api.Models.Files;
@@ -104,6 +105,27 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		await EnsureCanSee(creation, viewerId);
 
 		return await ToDetailResponse(creation);
+	}
+
+	/// <summary>
+	/// The program file of a creation (its program and environment), for a viewer who may see the creation. It is
+	/// what a cube runs when a user sends it the creation.
+	/// </summary>
+	/// <exception cref="NotFoundException">
+	/// The creation does not exist, or has no program file stored.
+	/// </exception>
+	/// <exception cref="ForbiddenException">
+	/// The creation is private and the viewer is neither its owner nor a super admin.
+	/// </exception>
+	public async Task<JsonNode> GetProgramFile(int viewerId, int creationId)
+	{
+		var creation = await db.Creations.FindAsync(creationId)
+			?? throw new NotFoundException($"Creation {creationId} was not found.");
+
+		await EnsureCanSee(creation, viewerId);
+
+		return await storage.ReadProgramFile(creation.Id)
+			?? throw new NotFoundException("The program file of this creation was not found on the server.");
 	}
 
 	/// <summary>

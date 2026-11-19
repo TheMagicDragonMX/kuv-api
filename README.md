@@ -58,7 +58,7 @@ Browsers may call the API only from the origins listed in `Cors:AllowedOrigins` 
 
 ## Cube sockets (live commands)
 
-The API routes messages between cubes and the web app over WebSockets. It only routes; it does not know what the commands mean. Every frame, in both directions, is one JSON text message `{ "name", "id"?, "replyTo"?, "payload"? }` (`Models/Messages/CubeMessage.cs`).
+The API routes messages between cubes and the web app over WebSockets. It only routes, with one exception: `run_creation` (below). Every frame, in both directions, is one JSON text message `{ "name", "id"?, "replyTo"?, "payload"? }` (`Models/Messages/CubeMessage.cs`).
 
 | Endpoint | Who | Authentication |
 |---|---|---|
@@ -67,6 +67,8 @@ The API routes messages between cubes and the web app over WebSockets. It only r
 
 - A client's message is forwarded to its cube as a **command** (the server adds an `id`). If the cube is not connected the client gets an `error` with `code: "cube_offline"` and `replyTo` the command's id; nothing is queued.
 - What a cube sends is forwarded to **every client** of that cube (its `reply` carries `replyTo`).
+- `run_creation` (`{ "creationId": number }`) is not forwarded as it is: the server reads that creation's `program.json` (the user must be allowed to see it, as for `GET /creations/{id}`) and sends it to the cube as `run_program`, keeping the command's `id`. The cube answers `program_status` as usual. If the payload has no creation id the client gets `invalid_payload`; if the creation does not exist or is private, `creation_unavailable`. This way the browser sends a few bytes instead of the whole program, which can be several MB.
+- A message from a client or a cube may be at most 1 MiB (`SocketLink`). What the server sends has no such limit, so a cube must accept large frames (kuv-cube takes up to 64 MiB).
 - The server tells clients `cube_status` (`{ "online": bool }`) when they connect and whenever the cube connects or disconnects. A second connection of the same cube id replaces the first.
 - `Cubes:Secret` (set `Cubes__Secret`) is the secret every cube uses; without it no cube can connect.
 - `ICubeDirectory` decides who is a valid cube and who may talk to which cube. `ConfigCubeDirectory` has no database: one shared secret, and every signed-in user may use every cube. When devices are stored, implement `ICubeDirectory` over them and swap it in `Program.cs`.
