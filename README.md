@@ -168,6 +168,23 @@ The other categories (most liked today, this week, all time) do not have an endp
 - `GET /creations/{id}/thumbnail` serves the thumbnail (`image/png`); `404` when the creation has none, as with videos made before there were thumbnails. Like the video, it takes the token as `?access_token=` so an `<img>` can load it.
 - The migration `DropCreationPrograms` removed the old `Creations.ProgramJson` and `EnvironmentJson` columns, **deleting the creations saved before programs moved to files** (there was no program file to keep them in). Their loose videos in `creations/*.webm`, if any are left on a server, can be deleted by hand.
 
+## Super admins
+
+A super admin (`Users.IsSuperAdmin`) can see every creation, public or private, and record the preview of any of them, whoever owns it: the web app shows them a panel at `/admin` for it. Nobody becomes one through the API; it is set by hand in the database:
+
+```sql
+UPDATE "Users" SET "IsSuperAdmin" = true WHERE "Username" = '<username>';
+```
+
+`GET /users/me` says whether the signed-in user is one (`isSuperAdmin`, false on every other profile). The endpoints of the panel (`Controllers/AdminController.cs`, `Services/AdminService.cs`) answer `403` to anyone else:
+
+| Endpoint | What it does |
+|---|---|
+| `GET /admin/creations` | Every creation of every user, the most recent first: `id`, `title`, `authorId`, `authorUsername`, `hasVideo`, `isPublic`, `createdAt` and `updatedAt`. |
+| `PUT /admin/creations/{id}/preview` | Replaces the preview of a creation: `multipart/form-data` with `videoDark`, `videoLight` and `thumbnail`, all three required, checked like in `PUT /creations/{id}`. Nothing else of the creation changes. |
+
+Super admins also get through the visibility check of `GET /creations/{id}`, its video and its thumbnail, so the panel can read the program of a private creation to record it and show what it recorded.
+
 ## EF Core commands
 
 Restore the local EF CLI tool once:

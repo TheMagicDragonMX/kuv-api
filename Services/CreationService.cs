@@ -3,6 +3,7 @@ using kuv_api.Models.Exceptions;
 using kuv_api.Models.Files;
 using kuv_api.Models.Entities;
 using kuv_api.Models.Requests;
+using kuv_api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 
 namespace kuv_api.Services;
@@ -32,10 +33,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
 
-		if (creation.UserId != viewerId && !creation.IsPublic)
-		{
-			throw new ForbiddenException("You cannot access this creation.");
-		}
+		await EnsureCanSee(creation, viewerId);
 
 		if (!creation.HasVideo)
 		{
@@ -58,10 +56,7 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
 
-		if (creation.UserId != viewerId && !creation.IsPublic)
-		{
-			throw new ForbiddenException("You cannot access this creation.");
-		}
+		await EnsureCanSee(creation, viewerId);
 
 		if (!creation.HasVideo)
 		{
@@ -99,17 +94,14 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 		await GetUserCreations(userId, userId);
 
 	/// <summary>
-	/// Returns a specific creation by ID if owned by the viewer or if public.
+	/// Returns a specific creation by ID if owned by the viewer, if public, or if the viewer is a super admin.
 	/// </summary>
 	public async Task<CreationDetailResponse> GetCreation(int viewerId, int creationId)
 	{
 		var creation = await db.Creations.FindAsync(creationId)
 			?? throw new NotFoundException($"Creation {creationId} was not found.");
 
-		if (creation.UserId != viewerId && !creation.IsPublic)
-		{
-			throw new ForbiddenException("You cannot access this creation.");
-		}
+		await EnsureCanSee(creation, viewerId);
 
 		return await ToDetailResponse(creation);
 	}
@@ -249,6 +241,73 @@ public sealed class CreationService(KuvDbContext db, CreationStorage storage, Pr
 
 		// The row goes first: a folder left behind is only clutter, a row without its folder is a broken creation
 		await storage.DeleteFolder(creation.Id);
+	}
+
+	/// <summary>
+	/// Every creation of every user, public or not, the most recent first, with its author. Only for super admins:
+	/// whoever calls it checks that first (see <see cref="AdminService"/>).
+	/// </summary>
+	public async Task<List<AdminCreationResponse>> GetAllCreations()
+	{
+		return await db.Creations
+			.OrderByDescending(creation => creation.CreatedAt)
+			.ThenByDescending(creation => creation.Id)
+			.Select(creation => new AdminCreationResponse(
+				creation.Id,
+				creation.Title,
+				creation.UserId,
+				creation.User.Username,
+				creation.HasVideo,
+				creation.IsPublic,
+				creation.CreatedAt,
+				creation.UpdatedAt
+			))
+			.ToListAsync();
+	}
+
+	/// <summary>
+	/// Replaces the preview of a creation (its two videos and its thumbnail) and nothing else, whoever owns it. Only
+	/// for super admins: whoever calls it checks that first (see <see cref="AdminService"/>).
+	/// </summary>
+	/// <exception cref="NotFoundException">
+	/// The creation does not exist.
+	/// </exception>
+	/// <exception cref="BadRequestException">
+	/// A file is missing or the thumbnail is not a small PNG.
+	/// </exception>
+	public async Task<CreationResponse> SetPreview(int creationId, SetPreviewRequest request)
+	{
+		var creation = await db.Creations.FindAsync(creationId)
+			?? throw new NotFoundException($"Creation {creationId} was not found.");
+
+		var (dark, light, thumbnail) = PreviewOf(request.VideoDark, request.VideoLight, request.Thumbnail)
+			?? throw new BadRequestException("Se necesitan los dos videos, el del tema oscuro y el del claro, y la miniatura.");
+
+		await storage.WriteVideos(creation.Id, dark, light);
+		await storage.WriteThumbnail(creation.Id, thumbnail);
+		creation.HasVideo = true;
+		await db.SaveChangesAsync();
+
+		return ToResponse(creation);
+	}
+
+	/// <summary>
+	/// Lets the viewer see a creation when it is theirs, when it is public, or when they are a super admin.
+	/// </summary>
+	/// <exception cref="ForbiddenException">
+	/// It is someone else's private creation and the viewer is not a super admin.
+	/// </exception>
+	private async Task EnsureCanSee(Creation creation, int viewerId)
+	{
+		if (creation.UserId == viewerId || creation.IsPublic)
+		{
+			return;
+		}
+
+		if (!await db.Users.AnyAsync(user => user.Id == viewerId && user.IsSuperAdmin))
+		{
+			throw new ForbiddenException("You cannot access this creation.");
+		}
 	}
 
 	/// <summary>

@@ -215,6 +215,9 @@ namespace kuv_api.Migrations
                     b.Property<string>("Hashword")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsSuperAdmin")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("RefreshToken")
                         .HasColumnType("text");
 

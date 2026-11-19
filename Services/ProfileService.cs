@@ -62,7 +62,8 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
                     follow.FollowerId == viewerId &&
                     follow.FollowedId == user.Id
                 ),
-                user.Id == viewerId
+                user.Id == viewerId,
+                user.Id == viewerId && user.IsSuperAdmin
             ))
             .SingleOrDefaultAsync()
             ?? throw new NotFoundException("Ese usuario no existe.");
@@ -402,6 +403,9 @@ public sealed class ProfileService(KuvDbContext dbContext, ProfilePhotoService p
 /// <param name="IsYou">
 /// Whether it is the viewer's own profile.
 /// </param>
+/// <param name="IsSuperAdmin">
+/// Whether the viewer is a super admin; only true on the viewer's own profile, so nobody learns who the others are.
+/// </param>
 public sealed record ProfileResponse(
     int Id,
     string Username,
@@ -412,7 +416,8 @@ public sealed record ProfileResponse(
     int Following,
     bool FollowsYou,
     bool YouFollow,
-    bool IsYou
+    bool IsYou,
+    bool IsSuperAdmin
 );
 
 /// <summary>

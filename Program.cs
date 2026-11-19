@@ -144,6 +144,7 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddSingleton<CreationStorage>();
 builder.Services.AddSingleton<ProgramFileValidator>();
 builder.Services.AddScoped<CreationService>();
+builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<CommentService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<FeedService>();

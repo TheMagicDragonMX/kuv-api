@@ -45,6 +45,12 @@ public class User : BaseEntity, ICreatedAt, IUpdatedAt
 	public string? Bio { get; set; }
 
 	/// <summary>
+	/// Whether the user is a super admin, who can see every creation and record its preview (<c>/admin</c>). Nobody
+	/// becomes one through the API: it is set by hand in the database.
+	/// </summary>
+	public bool IsSuperAdmin { get; set; }
+
+	/// <summary>
 	/// When the user was created.
 	/// </summary>
 	public DateTime CreatedAt { get; set; }

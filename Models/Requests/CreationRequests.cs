@@ -135,3 +135,24 @@ public sealed class UpdateCreationRequest
 	/// </summary>
 	public IFormFile? Thumbnail { get; set; }
 }
+
+/// <summary>
+/// The preview of a creation that a super admin records for it: the two videos and the thumbnail, all required.
+/// </summary>
+public sealed class SetPreviewRequest
+{
+	/// <summary>
+	/// The preview video recorded over the dark background (webm or mp4).
+	/// </summary>
+	public required IFormFile VideoDark { get; set; }
+
+	/// <summary>
+	/// The preview video recorded over the light background (webm or mp4).
+	/// </summary>
+	public required IFormFile VideoLight { get; set; }
+
+	/// <summary>
+	/// The thumbnail recorded with the videos: a 64x64 PNG of the face with the most LEDs on.
+	/// </summary>
+	public required IFormFile Thumbnail { get; set; }
+}
