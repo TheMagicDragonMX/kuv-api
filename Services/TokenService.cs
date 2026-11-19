@@ -5,6 +5,7 @@ using System.Text;
 using kuv_api.Data;
 using kuv_api.Models.Entities;
 using kuv_api.Models.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace kuv_api.Services;
@@ -32,15 +33,19 @@ public class TokenService(
     private readonly IConfiguration configuration = configuration;
 
     /// <summary>
-    /// Generates a new access/refresh token pair and saves the refresh token hash on the user.
+    /// Generates a new access/refresh token pair and saves the refresh token as a new session of the user, next to the
+    /// ones of their other devices. The user's expired sessions are deleted on the way.
     /// </summary>
     /// <param name="user">
     /// User to issue the tokens for.
     /// </param>
+    /// <param name="replacing">
+    /// The session being refreshed, which the new one replaces; null when signing in.
+    /// </param>
     /// <returns>
     /// The new access token, refresh token and access token lifetime.
     /// </returns>
-    public async Task<TokenResponse> IssueTokens(User user)
+    public async Task<TokenResponse> IssueTokens(User user, RefreshToken? replacing = null)
     {
         var now = DateTime.UtcNow;
 
@@ -67,9 +72,26 @@ public class TokenService(
 
         // Refresh token
         var refreshTokenLifetime = TimeSpan.FromDays(configuration.GetValue("Jwt:RefreshTokenDays", 7));
-        var refreshToken = CreateRefreshToken(now.Add(refreshTokenLifetime));
-        user.RefreshToken = HashToken(refreshToken);
+        var refreshExpiresAt = now.Add(refreshTokenLifetime);
+        var refreshToken = CreateRefreshToken(refreshExpiresAt);
+
+        if (replacing is not null)
+        {
+            dbContext.RefreshTokens.Remove(replacing);
+        }
+
+        dbContext.RefreshTokens.Add(new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = HashToken(refreshToken),
+            ExpiresAt = refreshExpiresAt
+        });
         await dbContext.SaveChangesAsync();
+
+        // Sessions nobody refreshed in time would pile up otherwise
+        await dbContext.RefreshTokens
+            .Where(token => token.UserId == user.Id && token.ExpiresAt <= now)
+            .ExecuteDeleteAsync();
 
         return new TokenResponse(accessToken, refreshToken, accessTokenLifetime.TotalSeconds);
     }
@@ -174,23 +196,6 @@ public class TokenService(
     public static string HashToken(string token)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-    }
-
-    /// <summary>
-    /// Checks that a refresh token has not expired.
-    /// </summary>
-    /// <param name="token">
-    /// Refresh token to check.
-    /// </param>
-    /// <returns>
-    /// <c>true</c> if the embedded expiry is in the future; otherwise <c>false</c>.
-    /// </returns>
-    public static bool HasValidRefreshTokenExpiry(string token)
-    {
-        var separator = token.LastIndexOf('.');
-        return separator > 0 &&
-            long.TryParse(token[(separator + 1)..], out var ticks) &&
-            new DateTime(ticks, DateTimeKind.Utc) > DateTime.UtcNow;
     }
 }
 

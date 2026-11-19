@@ -172,14 +172,17 @@ public class SessionController(
     public async Task<ActionResult<TokenResponse>> Refresh(RefreshRequest request)
     {
         var refreshTokenHash = TokenService.HashToken(request.RefreshToken);
-        var user = await dbContext.Users.SingleOrDefaultAsync(user => user.RefreshToken == refreshTokenHash);
+        var session = await dbContext.RefreshTokens
+            .Include(token => token.User)
+            .SingleOrDefaultAsync(token => token.TokenHash == refreshTokenHash);
 
-        if (user is null || !TokenService.HasValidRefreshTokenExpiry(request.RefreshToken))
+        if (session is null || session.ExpiresAt <= DateTime.UtcNow)
         {
             return Unauthorized();
         }
 
-        return Ok(await tokenService.IssueTokens(user));
+        // The used token is replaced by the new one, so each refresh token works only once
+        return Ok(await tokenService.IssueTokens(session.User, session));
     }
 }
 

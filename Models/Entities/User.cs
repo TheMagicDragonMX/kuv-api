@@ -34,11 +34,6 @@ public class User : BaseEntity, ICreatedAt, IUpdatedAt
 	public string? GoogleId { get; set; }
 
 	/// <summary>
-	/// Hash of the current refresh token. Null while the user has no active session.
-	/// </summary>
-	public string? RefreshToken { get; set; }
-
-	/// <summary>
 	/// What the user tells about themselves on their profile. Null until they write it.
 	/// The profile picture is not stored here: it is a file in <c>pfp</c> of the file store (see <c>ProfilePhotoService</c>).
 	/// </summary>

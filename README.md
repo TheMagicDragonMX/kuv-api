@@ -17,7 +17,9 @@ For deployment, set the `ConnectionStrings__DefaultConnection` environment varia
 Token lifetimes are set in the `Jwt` section of `appsettings.json`:
 
 - `Jwt:AccessTokenMinutes`: minutes an access token is valid (default `15`).
-- `Jwt:RefreshTokenDays`: days a refresh token is valid (default `7`).
+- `Jwt:RefreshTokenDays`: days a refresh token is valid (default `7`). Each refresh issues a new one with the whole lifetime again, so a session only ends after that many days without using the app.
+
+A user can be signed in on many devices at once: each login is a row of `RefreshTokens` (`Models/Entities/RefreshToken.cs`) with the hash of its refresh token and when it expires, so signing in somewhere does not sign out anyone else using the same account. A refresh replaces the row it used with a new one, and the user's expired rows are deleted whenever they get new tokens.
 
 ## Sessions and Google sign-in
 

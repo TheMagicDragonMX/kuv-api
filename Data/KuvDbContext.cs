@@ -15,6 +15,11 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	public DbSet<User> Users => Set<User>();
 
 	/// <summary>
+	/// The signed-in sessions of the users: one refresh token per device.
+	/// </summary>
+	public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+	/// <summary>
 	/// Who follows whom.
 	/// </summary>
 	public DbSet<Follow> Follows => Set<Follow>();
@@ -96,6 +101,13 @@ public sealed class KuvDbContext(DbContextOptions<KuvDbContext> options) : DbCon
 	{
 		// Two users can never share a Google account (accounts without one all hold null, which a unique index allows)
 		modelBuilder.Entity<User>(entity => entity.HasIndex(user => user.GoogleId).IsUnique());
+
+		modelBuilder.Entity<RefreshToken>(entity =>
+		{
+			entity.HasIndex(token => token.TokenHash).IsUnique();
+			entity.HasIndex(token => token.UserId);
+			entity.HasOne(token => token.User).WithMany().HasForeignKey(token => token.UserId).OnDelete(DeleteBehavior.Cascade);
+		});
 
 		modelBuilder.Entity<Follow>(entity =>
 		{
