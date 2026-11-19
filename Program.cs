@@ -144,6 +144,8 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddSingleton<CreationStorage>();
 builder.Services.AddSingleton<ProgramFileValidator>();
 builder.Services.AddScoped<CreationService>();
+builder.Services.AddScoped<CommentService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<FeedService>();
 builder.Services.AddSingleton<ICubeDirectory, ConfigCubeDirectory>();
 builder.Services.AddSingleton<CubeHub>();
